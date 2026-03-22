@@ -50,7 +50,7 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor.js
       database: process.env.POSTGRES_DATABASE,
       autoLoadEntities: true,
       entities: getMetadataArgsStorage().tables.map((tbl) => tbl.target),
-      synchronize: process.env.NODE_ENV !== 'production',
+      synchronize: true, // Temporarily true for active development
       // ssl: true,
       // extra: {
       //   ssl: {
