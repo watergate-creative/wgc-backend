@@ -1,83 +1,125 @@
 import {
   Injectable,
   NotFoundException,
-  BadRequestException,
   Logger,
-  OnModuleInit,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { FormTemplate, FormFieldType } from './entities/form-template.entity.js';
-import { FormSubmission } from './entities/form-submission.entity.js';
+import { FormEntry } from './entities/form-entry.entity.js';
 import {
-  CreateFormTemplateDto,
-  UpdateFormTemplateDto,
-  SubmitFormDto,
-  FormQueryDto,
-  SubmissionQueryDto,
+  CreateFormEntryDto,
+  UpdateFormEntryDto,
+  FormEntryQueryDto,
 } from './dto/form.dto.js';
+import { EmailService } from '../email/email.service.js';
+import { TermiiService } from '../notifications/termii.service.js';
 
 @Injectable()
-export class FormsService implements OnModuleInit {
+export class FormsService {
   private readonly logger = new Logger(FormsService.name);
 
   constructor(
-    @InjectRepository(FormTemplate)
-    private readonly templateRepository: Repository<FormTemplate>,
-    @InjectRepository(FormSubmission)
-    private readonly submissionRepository: Repository<FormSubmission>,
+    @InjectRepository(FormEntry)
+    private readonly formEntryRepository: Repository<FormEntry>,
+    private readonly emailService: EmailService,
+    private readonly termiiService: TermiiService,
   ) {}
 
-  // ─── LIFECYCLE: SEED TEMPLATES ON BOOT ───────────────────────
+  // ─── CREATE (Public submission) ──────────────────────────────
 
-  async onModuleInit(): Promise<void> {
-    const count = await this.templateRepository.count();
-    if (count === 0) {
-      this.logger.log('No form templates found. Seeding default templates...');
-      await this.seedDefaults();
-    }
-  }
+  async create(dto: CreateFormEntryDto): Promise<FormEntry> {
+    const entry = this.formEntryRepository.create(dto);
+    const saved = await this.formEntryRepository.save(entry);
+    this.logger.log(
+      `Form entry created: type="${saved.type}" from ${saved.email}`,
+    );
 
-  // ─── TEMPLATE CRUD ───────────────────────────────────────────
+    // Fire-and-forget: email first, SMS fallback
+    this.sendNotification(saved).catch(() => {});
 
-  async createTemplate(dto: CreateFormTemplateDto): Promise<FormTemplate> {
-    const slug = this.generateSlug(dto.title);
-
-    const existing = await this.templateRepository.findOne({ where: { slug } });
-    if (existing) {
-      throw new BadRequestException(`A form with a similar name already exists`);
-    }
-
-    const template = this.templateRepository.create({
-      ...dto,
-      slug,
-      fields: dto.fields as any,
-    });
-
-    const saved = await this.templateRepository.save(template);
-    this.logger.log(`Form template created: "${saved.title}" (${saved.slug})`);
     return saved;
   }
 
-  async findAllTemplates(
-    query: FormQueryDto,
-  ): Promise<{ data: FormTemplate[]; total: number }> {
-    const qb = this.templateRepository.createQueryBuilder('template');
+  // ─── NOTIFICATION: EMAIL-FIRST, SMS FALLBACK ─────────────────
 
-    if (query.isActive !== undefined) {
-      qb.andWhere('template.isActive = :isActive', {
-        isActive: query.isActive,
+  private async sendNotification(entry: FormEntry): Promise<void> {
+    try {
+      // Attempt email first
+      await this.emailService.sendFormSubmissionEmail(entry.email, {
+        fullName: entry.fullName,
+        formType: entry.type,
+        data: entry.data,
       });
+
+      this.logger.log(
+        `Form notification email sent to ${entry.email} for type="${entry.type}"`,
+      );
+    } catch (emailError: any) {
+      this.logger.warn(
+        `Email notification failed for ${entry.email}: ${emailError.message}. Falling back to SMS.`,
+      );
+
+      // Fallback to SMS only if phone is provided and email failed
+      if (entry.phone) {
+        try {
+          const smsMessage = this.buildSmsMessage(entry);
+          await this.termiiService.sendSms({
+            to: entry.phone,
+            sms: smsMessage,
+          });
+
+          this.logger.log(
+            `SMS fallback sent to ${entry.phone} for type="${entry.type}"`,
+          );
+        } catch (smsError: any) {
+          this.logger.error(
+            `SMS fallback also failed for ${entry.phone}: ${smsError.message}`,
+          );
+        }
+      } else {
+        this.logger.warn(
+          `No phone number available for SMS fallback. Notification skipped entirely for ${entry.email}.`,
+        );
+      }
+    }
+  }
+
+  private buildSmsMessage(entry: FormEntry): string {
+    const messages: Record<string, string> = {
+      'Volunteer': `Hi ${entry.fullName}, thank you for signing up to volunteer at WaterGate Church! Our team will reach out to you shortly.`,
+      'Naming Ceremony': `Hi ${entry.fullName}, your naming ceremony registration has been received. We will contact you to confirm the details.`,
+      'New Comers': `Hi ${entry.fullName}, welcome to WaterGate Church! We are so glad you connected with us. Expect a follow-up from our team.`,
+      'Altar Call': `Hi ${entry.fullName}, what a beautiful decision! We are here to support you. Someone from our pastoral team will be in touch.`,
+      'Pre-Marital Counselling': `Hi ${entry.fullName}, your pre-marital counselling registration has been received. Our counselling team will reach out to schedule your sessions.`,
+      'Counselling': `Hi ${entry.fullName}, your counselling request has been received. A member of our team will contact you to arrange a session.`,
+      'Feedback': `Hi ${entry.fullName}, thank you for your feedback! Your thoughts help us serve better.`,
+      'Testimony': `Hi ${entry.fullName}, thank you for sharing your testimony! Your story is an encouragement to us all.`,
+    };
+    return messages[entry.type] || `Hi ${entry.fullName}, your form submission has been received. Thank you!`;
+  }
+
+  // ─── FIND ALL (Admin, paginated + filtered) ──────────────────
+
+  async findAll(
+    query: FormEntryQueryDto,
+  ): Promise<{ data: FormEntry[]; total: number }> {
+    const qb = this.formEntryRepository.createQueryBuilder('entry');
+
+    if (query.type) {
+      qb.andWhere('entry.type = :type', { type: query.type });
+    }
+
+    if (query.email) {
+      qb.andWhere('entry.email = :email', { email: query.email });
     }
 
     if (query.search) {
-      qb.andWhere('LOWER(template.title) LIKE LOWER(:search)', {
+      qb.andWhere('LOWER(entry.fullName) LIKE LOWER(:search)', {
         search: `%${query.search}%`,
       });
     }
 
-    qb.loadRelationCountAndMap('template.submissionCount', 'template.submissions')
-      .orderBy('template.createdAt', 'DESC')
+    qb.orderBy('entry.createdAt', 'DESC')
       .skip(query.skip)
       .take(query.limit);
 
@@ -85,323 +127,33 @@ export class FormsService implements OnModuleInit {
     return { data, total };
   }
 
-  async findTemplateById(id: string): Promise<FormTemplate> {
-    const template = await this.templateRepository.findOne({
+  // ─── FIND ONE ────────────────────────────────────────────────
+
+  async findOne(id: string): Promise<FormEntry> {
+    const entry = await this.formEntryRepository.findOne({
       where: { id },
     });
-    if (!template) {
-      throw new NotFoundException('Form template not found');
+    if (!entry) {
+      throw new NotFoundException(`Form entry with ID "${id}" not found`);
     }
-    return template;
+    return entry;
   }
 
-  async findTemplateBySlug(slug: string): Promise<FormTemplate> {
-    const template = await this.templateRepository.findOne({
-      where: { slug, isActive: true },
-    });
-    if (!template) {
-      throw new NotFoundException(`Form "${slug}" not found or is not active`);
-    }
-    return template;
-  }
+  // ─── UPDATE (Admin) ──────────────────────────────────────────
 
-  async updateTemplate(
-    id: string,
-    dto: UpdateFormTemplateDto,
-  ): Promise<FormTemplate> {
-    const template = await this.findTemplateById(id);
-
-    if (dto.title && dto.title !== template.title) {
-      (template as any).slug = this.generateSlug(dto.title);
-    }
-
-    Object.assign(template, dto);
-    const updated = await this.templateRepository.save(template);
-    this.logger.log(`Form template updated: "${updated.title}"`);
+  async update(id: string, dto: UpdateFormEntryDto): Promise<FormEntry> {
+    const entry = await this.findOne(id);
+    Object.assign(entry, dto);
+    const updated = await this.formEntryRepository.save(entry);
+    this.logger.log(`Form entry updated: ${id}`);
     return updated;
   }
 
-  async removeTemplate(id: string): Promise<void> {
-    const template = await this.findTemplateById(id);
-    await this.templateRepository.softRemove(template);
-    this.logger.log(`Form template soft-deleted: ${id}`);
-  }
+  // ─── DELETE (Admin, soft-delete) ─────────────────────────────
 
-  // ─── FORM SUBMISSION ─────────────────────────────────────────
-
-  async submitForm(
-    slug: string,
-    dto: SubmitFormDto,
-  ): Promise<FormSubmission> {
-    const template = await this.findTemplateBySlug(slug);
-
-    // Validate submission data against field definitions
-    this.validateSubmission(template, dto.data);
-
-    const submission = this.submissionRepository.create({
-      templateId: template.id,
-      data: dto.data,
-      submitterName: dto.submitterName,
-      submitterEmail: dto.submitterEmail,
-      submitterPhone: dto.submitterPhone,
-    });
-
-    const saved = await this.submissionRepository.save(submission);
-    this.logger.log(
-      `Form submission received for "${template.title}" from ${dto.submitterEmail || dto.submitterName || 'anonymous'}`,
-    );
-    return saved;
-  }
-
-  async getSubmissions(
-    templateId: string,
-    query: SubmissionQueryDto,
-  ): Promise<{ data: FormSubmission[]; total: number }> {
-    await this.findTemplateById(templateId); // Ensure template exists
-
-    const qb = this.submissionRepository
-      .createQueryBuilder('submission')
-      .where('submission.templateId = :templateId', { templateId });
-
-    if (query.email) {
-      qb.andWhere('submission.submitterEmail = :email', {
-        email: query.email,
-      });
-    }
-
-    if (query.search) {
-      qb.andWhere('LOWER(submission.submitterName) LIKE LOWER(:search)', {
-        search: `%${query.search}%`,
-      });
-    }
-
-    qb.orderBy('submission.createdAt', 'DESC')
-      .skip(query.skip)
-      .take(query.limit);
-
-    const [data, total] = await qb.getManyAndCount();
-    return { data, total };
-  }
-
-  async getSubmissionById(id: string): Promise<FormSubmission> {
-    const submission = await this.submissionRepository.findOne({
-      where: { id },
-      relations: ['template'],
-    });
-    if (!submission) {
-      throw new NotFoundException('Submission not found');
-    }
-    return submission;
-  }
-
-  // ─── VALIDATION ──────────────────────────────────────────────
-
-  private validateSubmission(
-    template: FormTemplate,
-    data: Record<string, unknown>,
-  ): void {
-    const errors: string[] = [];
-
-    for (const field of template.fields) {
-      const value = data[field.name];
-
-      // Check required fields
-      if (field.required && (value === undefined || value === null || value === '')) {
-        errors.push(`"${field.label}" is required`);
-        continue;
-      }
-
-      if (value === undefined || value === null || value === '') {
-        continue; // Optional field with no value — skip
-      }
-
-      // Type-specific validation
-      switch (field.type) {
-        case FormFieldType.EMAIL:
-          if (typeof value !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-            errors.push(`"${field.label}" must be a valid email address`);
-          }
-          break;
-
-        case FormFieldType.NUMBER:
-          if (typeof value !== 'number' && isNaN(Number(value))) {
-            errors.push(`"${field.label}" must be a number`);
-          }
-          break;
-
-        case FormFieldType.CHECKBOX:
-          if (typeof value !== 'boolean') {
-            errors.push(`"${field.label}" must be true or false`);
-          }
-          break;
-
-        case FormFieldType.SELECT:
-          if (field.options && !field.options.includes(String(value))) {
-            errors.push(
-              `"${field.label}" must be one of: ${field.options.join(', ')}`,
-            );
-          }
-          break;
-
-        case FormFieldType.DATE:
-          if (typeof value === 'string' && isNaN(Date.parse(value))) {
-            errors.push(`"${field.label}" must be a valid date`);
-          }
-          break;
-      }
-
-      // Custom regex validation
-      if (field.validationRegex && typeof value === 'string') {
-        const regex = new RegExp(field.validationRegex);
-        if (!regex.test(value)) {
-          errors.push(`"${field.label}" format is invalid`);
-        }
-      }
-    }
-
-    if (errors.length > 0) {
-      throw new BadRequestException(errors);
-    }
-  }
-
-  // ─── SEED DEFAULTS ───────────────────────────────────────────
-
-  private async seedDefaults(): Promise<void> {
-    const defaults: Partial<FormTemplate>[] = [
-      {
-        title: 'Volunteer Form',
-        slug: 'volunteer-form',
-        description: 'Sign up to volunteer at WaterGate Church',
-        isActive: true,
-        fields: [
-          { name: 'fullName', label: 'Full Name', type: FormFieldType.TEXT, required: true, placeholder: 'Enter your full name' },
-          { name: 'email', label: 'Email Address', type: FormFieldType.EMAIL, required: true, placeholder: 'your@email.com' },
-          { name: 'phone', label: 'Phone Number', type: FormFieldType.PHONE, required: true, placeholder: '08012345678' },
-          { name: 'department', label: 'Preferred Department', type: FormFieldType.SELECT, required: true, options: ['Ushering', 'Choir', 'Media', 'Children', 'Technical', 'Protocol', 'Sanitation', 'Prayer', 'Other'] },
-          { name: 'experience', label: 'Related Experience', type: FormFieldType.TEXTAREA, required: false, placeholder: 'Tell us about any relevant experience' },
-          { name: 'availability', label: 'Availability', type: FormFieldType.SELECT, required: true, options: ['Sundays Only', 'Weekdays Only', 'Both', 'Flexible'] },
-        ],
-      },
-      {
-        title: 'Baby Dedication',
-        slug: 'baby-dedication',
-        description: 'Register your child for baby dedication',
-        isActive: true,
-        fields: [
-          { name: 'parentName', label: "Parent / Guardian's Full Name", type: FormFieldType.TEXT, required: true },
-          { name: 'parentPhone', label: "Parent's Phone Number", type: FormFieldType.PHONE, required: true },
-          { name: 'parentEmail', label: "Parent's Email", type: FormFieldType.EMAIL, required: false },
-          { name: 'babyName', label: "Baby's Full Name", type: FormFieldType.TEXT, required: true },
-          { name: 'babyDob', label: "Baby's Date of Birth", type: FormFieldType.DATE, required: true },
-          { name: 'babyGender', label: "Baby's Gender", type: FormFieldType.SELECT, required: true, options: ['Male', 'Female'] },
-          { name: 'dedicationDate', label: 'Preferred Dedication Date', type: FormFieldType.DATE, required: false },
-        ],
-      },
-      {
-        title: 'New Members',
-        slug: 'new-members',
-        description: 'Welcome to WaterGate Church! Tell us about yourself',
-        isActive: true,
-        fields: [
-          { name: 'fullName', label: 'Full Name', type: FormFieldType.TEXT, required: true },
-          { name: 'email', label: 'Email Address', type: FormFieldType.EMAIL, required: true },
-          { name: 'phone', label: 'Phone Number', type: FormFieldType.PHONE, required: true },
-          { name: 'gender', label: 'Gender', type: FormFieldType.SELECT, required: true, options: ['Male', 'Female'] },
-          { name: 'address', label: 'Home Address', type: FormFieldType.TEXTAREA, required: false, placeholder: 'Enter your address' },
-          { name: 'dob', label: 'Date of Birth', type: FormFieldType.DATE, required: false },
-          { name: 'howDidYouHear', label: 'How did you hear about us?', type: FormFieldType.SELECT, required: false, options: ['Social Media', 'A Friend/Family', 'Walk-in', 'Online Search', 'Flyer/Poster', 'Other'] },
-          { name: 'previousChurch', label: 'Previous Place of Worship', type: FormFieldType.TEXT, required: false },
-        ],
-      },
-      {
-        title: 'Altar Call',
-        slug: 'altar-call',
-        description: 'Record your decision at the altar call',
-        isActive: true,
-        fields: [
-          { name: 'fullName', label: 'Full Name', type: FormFieldType.TEXT, required: true },
-          { name: 'phone', label: 'Phone Number', type: FormFieldType.PHONE, required: true },
-          { name: 'email', label: 'Email Address', type: FormFieldType.EMAIL, required: false },
-          { name: 'decisionType', label: 'Decision', type: FormFieldType.SELECT, required: true, options: ['Salvation', 'Rededication', 'Water Baptism', 'Holy Spirit Baptism', 'Other'] },
-          { name: 'prayerRequest', label: 'Prayer Request', type: FormFieldType.TEXTAREA, required: false, placeholder: 'Share your prayer request if any' },
-        ],
-      },
-      {
-        title: 'Pre-Marital Counselling',
-        slug: 'pre-marital-counselling',
-        description: 'Register for pre-marital counselling at WaterGate Church',
-        isActive: true,
-        fields: [
-          { name: 'groomName', label: "Groom's Full Name", type: FormFieldType.TEXT, required: true },
-          { name: 'brideName', label: "Bride's Full Name", type: FormFieldType.TEXT, required: true },
-          { name: 'groomPhone', label: "Groom's Phone Number", type: FormFieldType.PHONE, required: true },
-          { name: 'bridePhone', label: "Bride's Phone Number", type: FormFieldType.PHONE, required: true },
-          { name: 'email', label: 'Contact Email', type: FormFieldType.EMAIL, required: true },
-          { name: 'proposedDate', label: 'Proposed Wedding Date', type: FormFieldType.DATE, required: true },
-          { name: 'notes', label: 'Additional Notes', type: FormFieldType.TEXTAREA, required: false },
-        ],
-      },
-      {
-        title: 'Counselling',
-        slug: 'counselling',
-        description: 'Request a counselling session',
-        isActive: true,
-        fields: [
-          { name: 'fullName', label: 'Full Name', type: FormFieldType.TEXT, required: true },
-          { name: 'phone', label: 'Phone Number', type: FormFieldType.PHONE, required: true },
-          { name: 'email', label: 'Email Address', type: FormFieldType.EMAIL, required: false },
-          { name: 'counsellingType', label: 'Type of Counselling', type: FormFieldType.SELECT, required: true, options: ['Spiritual', 'Marriage', 'Family', 'Career', 'Emotional', 'Other'] },
-          { name: 'preferredDay', label: 'Preferred Day', type: FormFieldType.SELECT, required: false, options: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] },
-          { name: 'briefDescription', label: 'Brief Description', type: FormFieldType.TEXTAREA, required: true, placeholder: 'Briefly describe why you need counselling' },
-          { name: 'isConfidential', label: 'Keep this strictly confidential', type: FormFieldType.CHECKBOX, required: false },
-        ],
-      },
-      {
-        title: 'Feedback Form',
-        slug: 'feedback-form',
-        description: 'Share your feedback about our services and events',
-        isActive: true,
-        fields: [
-          { name: 'fullName', label: 'Full Name (optional)', type: FormFieldType.TEXT, required: false },
-          { name: 'email', label: 'Email (optional)', type: FormFieldType.EMAIL, required: false },
-          { name: 'rating', label: 'How would you rate your experience?', type: FormFieldType.SELECT, required: true, options: ['Excellent', 'Very Good', 'Good', 'Fair', 'Poor'] },
-          { name: 'whatDidYouEnjoy', label: 'What did you enjoy most?', type: FormFieldType.TEXTAREA, required: false },
-          { name: 'improvements', label: 'What can we improve?', type: FormFieldType.TEXTAREA, required: false },
-          { name: 'additionalComments', label: 'Additional Comments', type: FormFieldType.TEXTAREA, required: false },
-        ],
-      },
-      {
-        title: 'Testimony',
-        slug: 'testimony',
-        description: 'Share your testimony with the church',
-        isActive: true,
-        fields: [
-          { name: 'fullName', label: 'Full Name', type: FormFieldType.TEXT, required: true },
-          { name: 'phone', label: 'Phone Number', type: FormFieldType.PHONE, required: false },
-          { name: 'testimonyText', label: 'Your Testimony', type: FormFieldType.TEXTAREA, required: true, placeholder: 'Share what God has done for you...' },
-          { name: 'canSharePublicly', label: 'Can we share this testimony publicly?', type: FormFieldType.CHECKBOX, required: false },
-          { name: 'testimonyDate', label: 'When did this happen?', type: FormFieldType.DATE, required: false },
-        ],
-      },
-    ];
-
-    for (const tmpl of defaults) {
-      const template = this.templateRepository.create(tmpl);
-      await this.templateRepository.save(template);
-    }
-
-    this.logger.log(`Seeded ${defaults.length} default form templates`);
-  }
-
-  // ─── HELPERS ─────────────────────────────────────────────────
-
-  private generateSlug(title: string): string {
-    const baseSlug = title
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '');
-
-    const uniqueSuffix = Date.now().toString(36);
-    return `${baseSlug}-${uniqueSuffix}`;
+  async remove(id: string): Promise<void> {
+    const entry = await this.findOne(id);
+    await this.formEntryRepository.softRemove(entry);
+    this.logger.log(`Form entry soft-deleted: ${id}`);
   }
 }

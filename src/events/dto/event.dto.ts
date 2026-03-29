@@ -8,7 +8,6 @@ import {
   IsNumber,
   IsEnum,
   IsArray,
-  IsUUID,
   MaxLength,
   ValidateNested,
   Min,
@@ -17,7 +16,42 @@ import { Type } from 'class-transformer';
 import { EventStatus, EventType } from '../entities/event.entity.js';
 import { PaginationQueryDto } from '../../common/dto/pagination.dto.js';
 
+// ─── DAILY SCHEDULE ────────────────────────────────────────────
 
+export enum DayOfWeek {
+  MONDAY = 'Monday',
+  TUESDAY = 'Tuesday',
+  WEDNESDAY = 'Wednesday',
+  THURSDAY = 'Thursday',
+  FRIDAY = 'Friday',
+  SATURDAY = 'Saturday',
+  SUNDAY = 'Sunday',
+}
+
+export enum SessionPeriod {
+  MORNING = 'Morning',
+  AFTERNOON = 'Afternoon',
+  EVENING = 'Evening',
+}
+
+export class DailyScheduleDto {
+  @ApiProperty({ enum: DayOfWeek, example: DayOfWeek.MONDAY, description: 'Day of the week' })
+  @IsEnum(DayOfWeek)
+  @IsNotEmpty()
+  day: DayOfWeek;
+
+  @ApiProperty({ enum: SessionPeriod, example: SessionPeriod.MORNING, description: 'Session period' })
+  @IsEnum(SessionPeriod)
+  @IsNotEmpty()
+  session: SessionPeriod;
+
+  @ApiProperty({ example: '9:00 AM', description: 'Time of the session' })
+  @IsString()
+  @IsNotEmpty()
+  time: string;
+}
+
+// ─── CREATE EVENT ──────────────────────────────────────────────
 
 export class CreateEventDto {
   @ApiProperty({ example: 'Partakers of the Holy Ghost' })
@@ -41,11 +75,18 @@ export class CreateEventDto {
   @IsNotEmpty()
   endDate: string;
 
-  @ApiPropertyOptional({ example: '9:00AM' })
-  @IsString()
-  @IsOptional()
-  @MaxLength(100)
-  startTime?: string;
+  @ApiProperty({
+    type: [DailyScheduleDto],
+    description: 'Daily session schedule array',
+    example: [
+      { day: 'Monday', session: 'Morning', time: '9:00 AM' },
+      { day: 'Monday', session: 'Evening', time: '6:00 PM' },
+    ],
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => DailyScheduleDto)
+  dailySchedule: DailyScheduleDto[];
 
   @ApiProperty({ example: 'The WaterGate Church, Jendol Bus-Stop, Oju Ore, Ota' })
   @IsString()
@@ -53,27 +94,11 @@ export class CreateEventDto {
   @MaxLength(500)
   location: string;
 
-  @ApiPropertyOptional({ example: 'Gloryland, Sango Ota, Ogun State' })
-  @IsString()
-  @IsOptional()
-  address?: string;
-
   @ApiPropertyOptional({ example: 'https://res.cloudinary.com/xxx/image/upload/banner.jpg' })
   @IsString()
   @IsOptional()
   @MaxLength(1000)
   bannerImageUrl?: string;
-
-  @ApiPropertyOptional({ example: 500 })
-  @IsNumber()
-  @IsOptional()
-  @Min(1)
-  capacity?: number;
-
-  @ApiPropertyOptional({ default: true })
-  @IsBoolean()
-  @IsOptional()
-  isFree?: boolean;
 
   @ApiPropertyOptional({ example: 0 })
   @IsNumber()
@@ -81,32 +106,17 @@ export class CreateEventDto {
   @Min(0)
   price?: number;
 
-  @ApiPropertyOptional({ default: true })
-  @IsBoolean()
-  @IsOptional()
-  isRegistrationRequired?: boolean;
-
   @ApiPropertyOptional({ enum: EventStatus, default: EventStatus.DRAFT })
   @IsEnum(EventStatus)
   @IsOptional()
   status?: EventStatus;
 
-  @ApiPropertyOptional({ default: true })
-  @IsBoolean()
-  @IsOptional()
-  isPublic?: boolean;
-
-  @ApiPropertyOptional({ type: [String], description: 'Array of Minister IDs' })
-  @IsArray()
-  @IsUUID('4', { each: true })
-  @IsOptional()
-  ministerIds?: string[];
-
-  @ApiPropertyOptional({ enum: EventType, description: 'Type of event' })
+  @ApiProperty({ enum: EventType, description: 'Type of event' })
   @IsEnum(EventType)
-  @IsOptional()
-  type?: EventType;
+  type: EventType;
 }
+
+// ─── UPDATE EVENT ──────────────────────────────────────────────
 
 export class UpdateEventDto {
   @ApiPropertyOptional({ example: 'Partakers of the Holy Ghost 2025' })
@@ -130,11 +140,15 @@ export class UpdateEventDto {
   @IsOptional()
   endDate?: string;
 
-  @ApiPropertyOptional()
-  @IsString()
+  @ApiPropertyOptional({
+    type: [DailyScheduleDto],
+    description: 'Daily session schedule array',
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => DailyScheduleDto)
   @IsOptional()
-  @MaxLength(100)
-  startTime?: string;
+  dailySchedule?: DailyScheduleDto[];
 
   @ApiPropertyOptional()
   @IsString()
@@ -145,24 +159,8 @@ export class UpdateEventDto {
   @ApiPropertyOptional()
   @IsString()
   @IsOptional()
-  address?: string;
-
-  @ApiPropertyOptional()
-  @IsString()
-  @IsOptional()
   @MaxLength(1000)
   bannerImageUrl?: string;
-
-  @ApiPropertyOptional()
-  @IsNumber()
-  @IsOptional()
-  @Min(1)
-  capacity?: number;
-
-  @ApiPropertyOptional()
-  @IsBoolean()
-  @IsOptional()
-  isFree?: boolean;
 
   @ApiPropertyOptional()
   @IsNumber()
@@ -170,32 +168,18 @@ export class UpdateEventDto {
   @Min(0)
   price?: number;
 
-  @ApiPropertyOptional()
-  @IsBoolean()
-  @IsOptional()
-  isRegistrationRequired?: boolean;
-
   @ApiPropertyOptional({ enum: EventStatus })
   @IsEnum(EventStatus)
   @IsOptional()
   status?: EventStatus;
-
-  @ApiPropertyOptional()
-  @IsBoolean()
-  @IsOptional()
-  isPublic?: boolean;
-
-  @ApiPropertyOptional({ type: [String], description: 'Array of Minister IDs' })
-  @IsArray()
-  @IsUUID('4', { each: true })
-  @IsOptional()
-  ministerIds?: string[];
 
   @ApiPropertyOptional({ enum: EventType })
   @IsEnum(EventType)
   @IsOptional()
   type?: EventType;
 }
+
+// ─── QUERY ─────────────────────────────────────────────────────
 
 export class EventQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional({ enum: EventType, description: 'Filter by event type' })
@@ -223,3 +207,4 @@ export class EventQueryDto extends PaginationQueryDto {
   @IsOptional()
   toDate?: string;
 }
+

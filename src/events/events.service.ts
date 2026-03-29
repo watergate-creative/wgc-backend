@@ -7,7 +7,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, SelectQueryBuilder } from 'typeorm';
 import { Event, EventStatus } from './entities/event.entity.js';
 import { CreateEventDto, UpdateEventDto, EventQueryDto } from './dto/event.dto.js';
-import { MinistersService } from '../ministers/ministers.service.js';
 
 @Injectable()
 export class EventsService {
@@ -16,8 +15,7 @@ export class EventsService {
   constructor(
     @InjectRepository(Event)
     private readonly eventRepository: Repository<Event>,
-    private readonly ministersService: MinistersService,
-  ) {}
+  ) { }
 
   async create(dto: CreateEventDto): Promise<Event> {
     const slug = this.generateSlug(dto.title);
@@ -27,11 +25,9 @@ export class EventsService {
       slug,
       startDate: new Date(dto.startDate),
       endDate: new Date(dto.endDate),
+      dailySchedule: dto.dailySchedule ? JSON.stringify(dto.dailySchedule) : "",
     });
 
-    if (dto.ministerIds && dto.ministerIds.length > 0) {
-      event.ministers = await this.ministersService.findByIds(dto.ministerIds);
-    }
 
     const saved = await this.eventRepository.save(event);
     this.logger.log(`Event created: "${saved.title}" (${saved.slug})`);
@@ -41,7 +37,6 @@ export class EventsService {
   async findAll(query: EventQueryDto): Promise<{ data: Event[]; total: number }> {
     const qb = this.eventRepository
       .createQueryBuilder('event')
-      .leftJoinAndSelect('event.ministers', 'ministers')
       .loadRelationCountAndMap('event.participantCount', 'event.participants');
 
     this.applyFilters(qb, query);
@@ -57,10 +52,8 @@ export class EventsService {
   async findUpcoming(limit = 10): Promise<Event[]> {
     return this.eventRepository
       .createQueryBuilder('event')
-      .leftJoinAndSelect('event.ministers', 'ministers')
       .loadRelationCountAndMap('event.participantCount', 'event.participants')
       .where('event.status = :status', { status: EventStatus.PUBLISHED })
-      .andWhere('event.isPublic = :isPublic', { isPublic: true })
       .andWhere('event.endDate >= :now', { now: new Date() })
       .orderBy('event.startDate', 'ASC')
       .take(limit)
@@ -70,7 +63,7 @@ export class EventsService {
   async findBySlug(slug: string): Promise<Event> {
     const event = await this.eventRepository.findOne({
       where: { slug },
-      relations: ['ministers', 'participants'],
+      relations: ['participants'],
     });
     if (!event) {
       throw new NotFoundException(`Event "${slug}" not found`);
@@ -81,7 +74,7 @@ export class EventsService {
   async findOne(id: string): Promise<Event> {
     const event = await this.eventRepository.findOne({
       where: { id },
-      relations: ['ministers', 'participants'],
+      relations: ['participants'],
     });
     if (!event) {
       throw new NotFoundException(`Event with ID "${id}" not found`);
@@ -103,12 +96,9 @@ export class EventsService {
       (dto as any).endDate = new Date(dto.endDate);
     }
 
-    if (dto.ministerIds !== undefined) {
-      if (dto.ministerIds.length > 0) {
-        event.ministers = await this.ministersService.findByIds(dto.ministerIds);
-      } else {
-        event.ministers = [];
-      }
+
+    if (dto.dailySchedule !== undefined) {
+      (dto as any).dailySchedule = JSON.stringify(dto.dailySchedule);
     }
 
     Object.assign(event, dto);

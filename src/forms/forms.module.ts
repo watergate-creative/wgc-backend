@@ -1,12 +1,17 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { FormTemplate } from './entities/form-template.entity.js';
-import { FormSubmission } from './entities/form-submission.entity.js';
+import { FormEntry } from './entities/form-entry.entity.js';
 import { FormsService } from './forms.service.js';
 import { FormsController } from './forms.controller.js';
+import { EmailModule } from '../email/email.module.js';
+import { NotificationsModule } from '../notifications/notifications.module.js';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([FormTemplate, FormSubmission])],
+  imports: [
+    TypeOrmModule.forFeature([FormEntry]),
+    EmailModule,
+    NotificationsModule,
+  ],
   controllers: [FormsController],
   providers: [FormsService],
   exports: [FormsService],

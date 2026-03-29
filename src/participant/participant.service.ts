@@ -36,10 +36,6 @@ export class ParticipantService {
       throw new BadRequestException('This event is not currently accepting registrations');
     }
 
-    if (event.capacity && event.registrationCount >= event.capacity) {
-      throw new BadRequestException('This event has reached its maximum capacity');
-    }
-
     const email = dto.email.toLowerCase();
 
     // Prevent duplicate registration for the *same* event
@@ -198,9 +194,8 @@ export class ParticipantService {
         eventTitle: event.title,
         startDate: event.startDate,
         endDate: event.endDate,
-        startTime: event.startTime,
+        dailySchedule: event.dailySchedule,
         location: event.location,
-        address: event.address,
       })
       .catch((error) => {
         this.logger.error(

@@ -11,7 +11,6 @@ import { ScheduleModule } from '@nestjs/schedule';
 // Feature modules
 import { AuthModule } from './auth/auth.module.js';
 import { EventsModule } from './events/events.module.js';
-import { MinistersModule } from './ministers/ministers.module.js';
 import { ParticipantModule } from './participant/participant.module.js';
 import { FileUploadModule } from './file-upload/file-upload.module.js';
 import { NotificationsModule } from './notifications/notifications.module.js';
@@ -75,7 +74,6 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor.js
 
     // Feature modules
     AuthModule,
-    MinistersModule,
     EventsModule,
     FileUploadModule,
     ParticipantModule,

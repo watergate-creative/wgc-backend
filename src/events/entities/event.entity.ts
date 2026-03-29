@@ -1,14 +1,18 @@
 import { BaseEntity } from '../../common/entities/base.entities.js';
-import { Column, Entity, ManyToMany, JoinTable, OneToMany } from 'typeorm';
-import { Minister } from '../../ministers/entities/minister.entity.js';
+import { Column, Entity, OneToMany } from 'typeorm';
 import { Participant } from '../../participant/entities/participant.entity.js';
 
 export enum EventType {
-  SUNDAY_SERVICE = 'sunday_service',
-  BIBLE_STUDY = 'bible_study',
-  SPECIAL_PROGRAM = 'special_program',
-  CONCERT = 'concert',
-  CONFERENCE = 'conference',
+  SEERS_AND_SCRIBES = 'SEERS AND SCRIBES BOOTCAMP',
+  KDG = 'KINGDOM DIPLOMAT GATHERING',
+  FOCP = 'FEAST OF CHOICE PIECES',
+  KACS = 'KINGDOM ADVANCEMENT CITY SUMMIT',
+  ETHANIM = 'ETHANIM',
+  TYRANUS = 'TYRANUS RETREAT',
+  CRYSTAL_WATERS = 'CRYSTAL WATERS',
+  HUNDREDFOLD_SUMMIT = 'HUNDREDFOLD SUMMIT',
+  TRANSFORMATION_SERVICE = 'TRANSFORMATION SERVICE',
+  HARP_AND_BOWL = 'HARP AND BOWL',
 }
 
 export enum EventStatus {
@@ -23,7 +27,7 @@ export class Event extends BaseEntity {
   @Column({
     type: 'enum',
     enum: EventType,
-    default: EventType.SUNDAY_SERVICE,
+    default: EventType.TRANSFORMATION_SERVICE,
   })
   type: EventType;
   @Column({ type: 'varchar', length: 500, nullable: false })
@@ -41,29 +45,17 @@ export class Event extends BaseEntity {
   @Column({ type: 'timestamptz', nullable: false })
   endDate: Date;
 
-  @Column({ type: 'varchar', length: 100, nullable: true })
-  startTime: string;
+  @Column({ type: 'text', nullable: true })
+  dailySchedule: string;
 
   @Column({ type: 'varchar', length: 500, nullable: false })
   location: string;
 
-  @Column({ type: 'text', nullable: true })
-  address: string;
-
   @Column({ type: 'varchar', length: 1000, nullable: true })
   bannerImageUrl: string;
 
-  @Column({ type: 'int', nullable: true })
-  capacity: number;
-
-  @Column({ type: 'boolean', default: true })
-  isFree: boolean;
-
   @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true, default: 0 })
   price: number;
-
-  @Column({ type: 'boolean', default: true })
-  isRegistrationRequired: boolean;
 
   @Column({
     type: 'enum',
@@ -71,23 +63,6 @@ export class Event extends BaseEntity {
     default: EventStatus.DRAFT,
   })
   status: EventStatus;
-
-  @Column({ type: 'boolean', default: true })
-  isPublic: boolean;
-
-  @ManyToMany(() => Minister, (minister) => minister.events, { cascade: false })
-  @JoinTable({
-    name: 'event_ministers',
-    joinColumn: {
-      name: 'eventId',
-      referencedColumnName: 'id',
-    },
-    inverseJoinColumn: {
-      name: 'ministerId',
-      referencedColumnName: 'id',
-    },
-  })
-  ministers: Minister[];
 
   @OneToMany(() => Participant, (participant) => participant.event)
   participants: Participant[];

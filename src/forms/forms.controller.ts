@@ -17,11 +17,9 @@ import {
 } from '@nestjs/swagger';
 import { FormsService } from './forms.service.js';
 import {
-  CreateFormTemplateDto,
-  UpdateFormTemplateDto,
-  SubmitFormDto,
-  FormQueryDto,
-  SubmissionQueryDto,
+  CreateFormEntryDto,
+  UpdateFormEntryDto,
+  FormEntryQueryDto,
 } from './dto/form.dto.js';
 import { Public } from '../common/decorators/public.decorator.js';
 import { Roles } from '../common/decorators/roles.decorator.js';
@@ -33,94 +31,64 @@ import { ApiResponse as ApiResponseDto } from '../common/dto/api-response.dto.js
 export class FormsController {
   constructor(private readonly formsService: FormsService) {}
 
-  // ─── TEMPLATE MANAGEMENT (Admin) ─────────────────────────────
+  // ─── PUBLIC: Submit a form entry ─────────────────────────────
 
-  @Post('templates')
-  @Roles('admin')
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Create a new form template (Admin only)' })
-  @ApiResponse({ status: 201, description: 'Template created' })
-  async createTemplate(@Body() dto: CreateFormTemplateDto) {
-    return this.formsService.createTemplate(dto);
-  }
-
-  @Get('templates')
-  @Public()
-  @ApiOperation({ summary: 'List all form templates' })
-  @ApiResponse({ status: 200, description: 'Paginated list of form templates' })
-  async findAllTemplates(@Query() query: FormQueryDto) {
-    const { data, total } = await this.formsService.findAllTemplates(query);
-    return ApiResponseDto.paginated(data, total, query.page, query.limit);
-  }
-
-  @Get('templates/:slug')
-  @Public()
-  @ApiOperation({ summary: 'Get form template by slug (for rendering)' })
-  @ApiResponse({ status: 200, description: 'Template found' })
-  @ApiResponse({ status: 404, description: 'Template not found' })
-  async findTemplateBySlug(@Param('slug') slug: string) {
-    return this.formsService.findTemplateBySlug(slug);
-  }
-
-  @Patch('templates/:id')
-  @Roles('admin')
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Update a form template (Admin only)' })
-  @ApiResponse({ status: 200, description: 'Template updated' })
-  async updateTemplate(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: UpdateFormTemplateDto,
-  ) {
-    return this.formsService.updateTemplate(id, dto);
-  }
-
-  @Delete('templates/:id')
-  @Roles('admin')
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Delete a form template (Admin only)' })
-  @ApiResponse({ status: 200, description: 'Template deleted' })
-  async removeTemplate(@Param('id', ParseUUIDPipe) id: string) {
-    await this.formsService.removeTemplate(id);
-    return { message: 'Form template deleted successfully' };
-  }
-
-  // ─── PUBLIC SUBMISSION ───────────────────────────────────────
-
-  @Post('templates/:slug/submit')
+  @Post()
   @Public()
   @Throttle({ default: { limit: 10, ttl: 60000 } })
-  @ApiOperation({ summary: 'Submit a form (public, rate-limited)' })
-  @ApiResponse({ status: 201, description: 'Form submitted' })
-  @ApiResponse({ status: 400, description: 'Validation failed' })
-  async submitForm(
-    @Param('slug') slug: string,
-    @Body() dto: SubmitFormDto,
-  ) {
-    return this.formsService.submitForm(slug, dto);
+  @ApiOperation({ summary: 'Submit a form entry (public, rate-limited)' })
+  @ApiResponse({ status: 201, description: 'Form entry created' })
+  async create(@Body() dto: CreateFormEntryDto) {
+    return this.formsService.create(dto);
   }
 
-  // ─── SUBMISSION QUERIES (Admin) ──────────────────────────────
+  // ─── ADMIN: List all form entries (paginated + filtered) ─────
 
-  @Get('templates/:id/submissions')
+  @Get()
   @Roles('admin')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'List submissions for a form template (Admin only)' })
-  @ApiResponse({ status: 200, description: 'Paginated list of submissions' })
-  async getSubmissions(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Query() query: SubmissionQueryDto,
-  ) {
-    const { data, total } = await this.formsService.getSubmissions(id, query);
+  @ApiOperation({ summary: 'List all form entries (Admin only, filterable by type/email/name)' })
+  @ApiResponse({ status: 200, description: 'Paginated list of form entries' })
+  async findAll(@Query() query: FormEntryQueryDto) {
+    const { data, total } = await this.formsService.findAll(query);
     return ApiResponseDto.paginated(data, total, query.page, query.limit);
   }
 
-  @Get('submissions/:id')
+  // ─── ADMIN: Get a single form entry ──────────────────────────
+
+  @Get(':id')
   @Roles('admin')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get a single submission detail (Admin only)' })
-  @ApiResponse({ status: 200, description: 'Submission found' })
-  @ApiResponse({ status: 404, description: 'Submission not found' })
-  async getSubmissionById(@Param('id', ParseUUIDPipe) id: string) {
-    return this.formsService.getSubmissionById(id);
+  @ApiOperation({ summary: 'Get a single form entry by ID (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Form entry found' })
+  @ApiResponse({ status: 404, description: 'Form entry not found' })
+  async findOne(@Param('id', ParseUUIDPipe) id: string) {
+    return this.formsService.findOne(id);
+  }
+
+  // ─── ADMIN: Update a form entry ──────────────────────────────
+
+  @Patch(':id')
+  @Roles('admin')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update a form entry (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Form entry updated' })
+  async update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateFormEntryDto,
+  ) {
+    return this.formsService.update(id, dto);
+  }
+
+  // ─── ADMIN: Delete a form entry ──────────────────────────────
+
+  @Delete(':id')
+  @Roles('admin')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Delete a form entry (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Form entry deleted' })
+  async remove(@Param('id', ParseUUIDPipe) id: string) {
+    await this.formsService.remove(id);
+    return { message: 'Form entry deleted successfully' };
   }
 }

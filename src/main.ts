@@ -43,7 +43,7 @@ async function bootstrap() {
   const config = new DocumentBuilder()
     .setTitle('WaterGate Church API')
     .setDescription(
-      'Production-grade backend API for WaterGate Church — events, registration, file uploads, and more.',
+      'Production-grade backend API for WaterGate Church — events, registration, file uploads, and more.\n\n🔗 [**View OpenAPI JSON Specification**](/api/v1/docs-json)',
     )
     .setVersion('1.0')
     .addBearerAuth(
@@ -58,7 +58,6 @@ async function bootstrap() {
     .addTag('health', 'Application health check')
     .addTag('auth', 'Authentication, authorization & user management')
     .addTag('events', 'Church events management')
-    .addTag('ministers', 'Ministers / guest speakers')
     .addTag('event-participants', 'Event registration & check-in (open to public)')
     .addTag('uploads', 'File upload via Cloudinary')
     .addTag('forms', 'Dynamic form builder & submissions')
