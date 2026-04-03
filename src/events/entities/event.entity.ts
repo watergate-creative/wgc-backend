@@ -25,8 +25,8 @@ export enum EventStatus {
 @Entity('Events')
 export class Event extends BaseEntity {
   @Column({
-    type: 'enum',
-    enum: EventType,
+    type: 'varchar',
+    length: 255,
     default: EventType.TRANSFORMATION_SERVICE,
   })
   type: EventType;
@@ -58,8 +58,8 @@ export class Event extends BaseEntity {
   price: number;
 
   @Column({
-    type: 'enum',
-    enum: EventStatus,
+    type: 'varchar',
+    length: 50,
     default: EventStatus.DRAFT,
   })
   status: EventStatus;
