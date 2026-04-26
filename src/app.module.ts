@@ -50,12 +50,12 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor.js
       autoLoadEntities: true,
       entities: getMetadataArgsStorage().tables.map((tbl) => tbl.target),
       synchronize: true, // Temporarily true for active development
-      // ssl: true,
-      // extra: {
-      //   ssl: {
-      //     rejectUnauthorized: false,
-      //   },
-      // },
+      ssl: true,
+      extra: {
+        ssl: {
+          rejectUnauthorized: false,
+        },
+      },
     }),
 
     // Rate Limiting — 100 requests per minute globally
