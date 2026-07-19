@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: #f4f4f7; margin: 0; padding: 0; }
+    .container { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+    .header { background: linear-gradient(135deg, #1a237e, #283593); color: #ffffff; text-align: center; padding: 36px 24px; }
+    .header h1 { margin: 0; font-size: 22px; font-weight: 600; }
+    .body { padding: 32px 24px; color: #333333; line-height: 1.6; }
+    .body h2 { color: #1a237e; margin-top: 0; font-size: 18px; }
+    .meta-bar { background: #f1f5f9; padding: 12px 16px; border-radius: 6px; font-size: 13px; color: #475569; margin-bottom: 24px; }
+    .data-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+    .data-table th { text-align: left; padding: 10px; background: #f8f9fa; color: #64748b; font-size: 12px; text-transform: uppercase; border-bottom: 2px solid #e2e8f0; width: 35%; }
+    .data-table td { padding: 12px 10px; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 14px; }
+    .btn-container { text-align: center; margin: 30px 0; }
+    .btn { background: #1a237e; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: bold; display: inline-block; font-size: 14px; }
+    .footer { text-align: center; padding: 20px; font-size: 12px; color: #999999; border-top: 1px solid #eeeeee; background: #fafafa; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>New Form Submission</h1>
+    </div>
+    <div class="body">
+      <h2>{{formTitle}}</h2>
+      
+      <div class="meta-bar">
+        <strong>Submitted By:</strong> {{submittedBy}} <br>
+        <strong>Date:</strong> {{submittedAt}}
+      </div>
+
+      <p>A new submission has been received. Here are the details provided:</p>
+
+      <table class="data-table">
+        <tbody>
+          {{#each formFields}}
+          <tr>
+            <th>{{this.label}}</th>
+            <td>{{this.value}}</td>
+          </tr>
+          {{/each}}
+        </tbody>
+      </table>
+
+      {{#if adminNotes}}
+      <div style="background: #fff3cd; color: #856404; padding: 12px; border-radius: 6px; font-size: 13px; margin-top: 16px;">
+        <strong>Note:</strong> {{adminNotes}}
+      </div>
+      {{/if}}
+
+      {{#if actionUrl}}
+      <div class="btn-container">
+        <a href="{{actionUrl}}" class="btn">View in Portal / Follow Up</a>
+      </div>
+      {{/if}}
+
+      <p style="font-size: 13px; color: #64748b; margin-top: 32px;">This is an automated system notification from {{appName}}.</p>
+    </div>
+    <div class="footer">
+      <p>&copy; {{year}} Watergate Church Global. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html>

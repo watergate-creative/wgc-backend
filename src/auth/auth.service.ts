@@ -22,7 +22,7 @@ import {
   UserQueryDto,
   AuthResponseDto,
 } from './dto/auth.dto.js';
-import { EmailService } from '../email/email.service.js';
+import { MailService } from '../email/mail.service.js';
 
 @Injectable()
 export class AuthService {
@@ -34,7 +34,7 @@ export class AuthService {
     private readonly userRepository: Repository<User>,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
-    private readonly emailService: EmailService,
+    private readonly emailService: MailService,
   ) {
     this.jwtRefreshSecret = this.configService.get<string>(
       'JWT_REFRESH_SECRET',
@@ -68,11 +68,22 @@ export class AuthService {
     const savedUser = await this.userRepository.save(user);
     this.logger.log(`User registered: ${savedUser.email}`);
 
-    // Fire-and-forget welcome email
     this.emailService
-      .sendWelcomeEmail(savedUser.email, savedUser.firstName)
-      .catch((e) => this.logger.error(`Welcome email failed: ${e.message}`));
-
+    .queueEmail(
+      {
+        to: email,
+        subject: 'Welcome onboard to the WaterGate Community!',
+        template: 'welcome',
+        context: {
+          firstName: user.firstName,
+          appName: "WaterGate Church Community",
+          year: new Date().getFullYear(),                     
+        }
+      }).catch((error) => {
+        this.logger.error(
+          `Failed to send confirmation email to ${email}: ${error.message}`,
+        );
+      });
     const tokens = await this.generateTokens(savedUser);
     await this.updateRefreshToken(savedUser.id, tokens.refreshToken);
 
@@ -82,15 +93,15 @@ export class AuthService {
   async login(loginDto: LoginDto): Promise<AuthResponseDto> {
     const user = await this.userRepository.findOne({
       where: { email: loginDto.email.toLowerCase().trim() },
-      select: [
-        'id',
-        'email',
-        'password',
-        'firstName',
-        'lastName',
-        'role',
-        'isActive',
-      ],
+      select: {
+        'id':true,
+        'email':true,
+        'password':true,
+        'firstName':true,
+        'lastName':true,
+        'role':true,
+        'isActive':true,
+      },
     });
 
     if (!user) {
@@ -139,15 +150,15 @@ export class AuthService {
 
     const user = await this.userRepository.findOne({
       where: { id: payload.sub },
-      select: [
-        'id',
-        'email',
-        'firstName',
-        'lastName',
-        'role',
-        'isActive',
-        'refreshToken',
-      ],
+      select: {
+        'id':true,
+        'email':true,
+        'firstName':true,
+        'lastName':true,
+        'role':true,
+        'isActive':true,
+        'refreshToken':true,
+      },
     });
 
     if (!user || !user.refreshToken) {
@@ -199,7 +210,7 @@ export class AuthService {
   ): Promise<{ message: string }> {
     const user = await this.userRepository.findOne({
       where: { id: userId },
-      select: ['id', 'password'],
+      select: {'id':true, 'password':true},
     });
 
     if (!user) {

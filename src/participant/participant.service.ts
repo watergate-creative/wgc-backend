@@ -10,7 +10,7 @@ import { Repository } from 'typeorm';
 import { Participant } from './entities/participant.entity.js';
 import { RegisterParticipantDto, BulkRegistrationDto, ParticipantQueryDto } from './dto/participant.dto.js';
 import { EventsService } from '../events/events.service.js';
-import { EmailService } from '../email/email.service.js';
+import { MailService } from '../email/mail.service.js';
 import { EventStatus } from '../events/entities/event.entity.js';
 import { TermiiService } from '../notifications/termii.service.js';
 
@@ -22,7 +22,7 @@ export class ParticipantService {
     @InjectRepository(Participant)
     private readonly participantRepository: Repository<Participant>,
     private readonly eventsService: EventsService,
-    private readonly emailService: EmailService,
+    private readonly emailService: MailService,
     private readonly termiiService: TermiiService,
   ) {}
 
@@ -56,7 +56,28 @@ export class ParticipantService {
     const saved = await this.participantRepository.save(participant);
     await this.eventsService.incrementRegistrationCount(eventId);
 
-    this.sendConfirmationEmail(email, dto.firstName, event);
+    await this.emailService.queueEmail({
+        to: email,
+        subject: `${event.title.toUpperCase()} REGISTRATION SUCCESSFUL`,
+        template: 'registration-confirmation',
+        context: {
+          firstName: participant.firstName,
+          bannerImageUrl: event.bannerImageUrl,
+          startDate: event.startDate,                     
+          endDate: event.endDate,                     
+          dailySchedule: event.dailySchedule,                     
+          title: event.title,                     
+          location: event.location,                     
+          description: event.description, 
+          registrationId: participant.id,
+          year: new Date().getFullYear()                  
+        }
+      })
+      .catch((error) => {
+        this.logger.error(
+          `Failed to send confirmation email to ${email}: ${error.message}`,
+        );
+      });
     
     // Trigger Termii SMS Notification if phone is provided
     if (dto.phone) {
@@ -185,22 +206,5 @@ export class ParticipantService {
     await this.participantRepository.softRemove(participant);
     await this.eventsService.decrementRegistrationCount(eventId);
     this.logger.log(`Participant registration removed: ${participantId}`);
-  }
-
-  private sendConfirmationEmail(email: string, firstName: string, event: any): void {
-    this.emailService
-      .sendRegistrationConfirmation(email, {
-        firstName,
-        eventTitle: event.title,
-        startDate: event.startDate,
-        endDate: event.endDate,
-        dailySchedule: event.dailySchedule,
-        location: event.location,
-      })
-      .catch((error) => {
-        this.logger.error(
-          `Failed to send confirmation email to ${email}: ${error.message}`,
-        );
-      });
   }
 }

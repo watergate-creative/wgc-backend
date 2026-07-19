@@ -11,7 +11,7 @@ import {
   UpdateFormEntryDto,
   FormEntryQueryDto,
 } from './dto/form.dto.js';
-import { EmailService } from '../email/email.service.js';
+import { MailService } from '../email/mail.service.js';
 import { TermiiService } from '../notifications/termii.service.js';
 
 @Injectable()
@@ -21,7 +21,7 @@ export class FormsService {
   constructor(
     @InjectRepository(FormEntry)
     private readonly formEntryRepository: Repository<FormEntry>,
-    private readonly emailService: EmailService,
+    private readonly mailService: MailService,
     private readonly termiiService: TermiiService,
   ) {}
 
@@ -34,8 +34,18 @@ export class FormsService {
       `Form entry created: type="${saved.type}" from ${saved.email}`,
     );
 
-    // Fire-and-forget: email first, SMS fallback
-    this.sendNotification(saved).catch(() => {});
+    await this.mailService.queueEmail({
+                  to: entry.email,
+                  subject: "We Receive Your Feedback",
+                  template: 'form-notification', // Matches 'welcome.hbs' in your templates folder
+                  context: {
+                    formFields: 'Samuel',
+                    formTitle: entry.fullName,
+                    submittedAt: entry.type,
+                    submittedBy: entry.data,
+                    year: new Date().getFullYear()
+                  }
+                });
 
     return saved;
   }
@@ -44,21 +54,7 @@ export class FormsService {
 
   private async sendNotification(entry: FormEntry): Promise<void> {
     try {
-      // Attempt email first
-      await this.emailService.sendFormSubmissionEmail(entry.email, {
-        fullName: entry.fullName,
-        formType: entry.type,
-        data: entry.data,
-      });
-
-      this.logger.log(
-        `Form notification email sent to ${entry.email} for type="${entry.type}"`,
-      );
-    } catch (emailError: any) {
-      this.logger.warn(
-        `Email notification failed for ${entry.email}: ${emailError.message}. Falling back to SMS.`,
-      );
-
+      
       // Fallback to SMS only if phone is provided and email failed
       if (entry.phone) {
         try {
@@ -81,8 +77,14 @@ export class FormsService {
           `No phone number available for SMS fallback. Notification skipped entirely for ${entry.email}.`,
         );
       }
+    }catch(error: any)
+    {
+      this.logger.error(
+      `SMS fallback also failed for ${entry.phone}: ${error.message}`,
+    );
     }
   }
+  
 
   private buildSmsMessage(entry: FormEntry): string {
     const messages: Record<string, string> = {

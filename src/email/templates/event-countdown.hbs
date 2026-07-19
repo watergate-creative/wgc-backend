@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: #f4f4f7; margin: 0; padding: 0; }
+    .container { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+    .header { background: linear-gradient(135deg, #1a237e, #283593); color: #ffffff; text-align: center; padding: 36px 24px; }
+    .countdown-banner { background: #e8eaf6; color: #1a237e; text-align: center; padding: 12px; font-weight: bold; font-size: 16px; border-bottom: 1px solid #c5cae9; }
+    .header h1 { margin: 0; font-size: 24px; font-weight: 600; }
+    .body { padding: 32px 24px; color: #333333; line-height: 1.6; }
+    .body h2 { color: #1a237e; margin-top: 0; font-size: 18px; }
+    .event-box { background: #f8f9fa; border-radius: 8px; padding: 16px; margin: 20px 0; text-align: center; border: 1px solid #eeeeee; }
+    .checklist { background: #ffffff; border-left: 3px solid #ff9800; padding: 10px 10px 10px 20px; margin: 20px 0; font-size: 14px; }
+    .btn-container { text-align: center; margin: 30px 0; }
+    .btn { background: #1a237e; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-weight: bold; display: inline-block; }
+    .footer { text-align: center; padding: 20px; font-size: 12px; color: #999999; border-top: 1px solid #eeeeee; background: #fafafa; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>We Cannot Wait to See You!</h1>
+    </div>
+    <div class="countdown-banner">
+      ⏳ Happening in {{timeRemaining}}!
+    </div>
+    <div class="body">
+      <h2>Hello {{firstName}},</h2>
+      <p>This is a quick reminder that <strong>{{eventName}}</strong> is just around the corner. Everything is set, and we are looking forward to a wonderful time with you.</p>
+      
+      <div class="event-box">
+        <h3 style="margin: 0 0 8px 0; color: #1a237e;">{{eventName}}</h3>
+        <p style="margin: 4px 0; font-size: 15px;"><strong>📅 When:</strong> {{eventDate}} at {{eventTime}}</p>
+        <p style="margin: 4px 0; font-size: 15px;"><strong>📍 Where:</strong> {{location}}</p>
+      </div>
+
+      {{#if checklistItems}}
+      <div class="checklist">
+        <strong>A Few Things to Keep in Mind:</strong>
+        <ul style="margin: 8px 0 0 0; padding-left: 16px;">
+          {{#each checklistItems}}
+            <li style="margin-bottom: 4px;">{{this}}</li>
+          {{/each}}
+        </ul>
+      </div>
+      {{/if}}
+
+      {{#if actionUrl}}
+      <div class="btn-container">
+        <a href="{{actionUrl}}" class="btn">{{#if isVirtual}}Join Online Room{{else}}Get Directions{{/if}}</a>
+      </div>
+      {{/if}}
+
+      <p>See you soon!</p>
+      <p>God bless you! 🙏</p>
+    </div>
+    <div class="footer">
+      <p>&copy; {{year}} Watergate Church Global. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html>

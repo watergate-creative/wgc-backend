@@ -1,11 +1,3 @@
-/**
- * Welcome Email Template
- */
-export function welcomeTemplate(vars: {
-  appName: string;
-  firstName: string;
-}): string {
-  return `
 <!DOCTYPE html>
 <html>
 <head>
@@ -23,18 +15,17 @@ export function welcomeTemplate(vars: {
 <body>
   <div class="container">
     <div class="header">
-      <h1>Welcome to ${vars.appName}!</h1>
+      <h1>Welcome to {{appName}}!</h1>
     </div>
     <div class="body">
-      <h2>Hello ${vars.firstName},</h2>
-      <p>Welcome to ${vars.appName}! Your account has been created successfully.</p>
+      <h2>Hello {{firstName}},</h2>
+      <p>Welcome to {{appName}}! Your account has been created successfully.</p>
       <p>You can now browse our events, register for upcoming programs, and stay connected with our community.</p>
       <p>God bless you! 🙏</p>
     </div>
     <div class="footer">
-      <p>&copy; ${new Date().getFullYear()} ${vars.appName}. All rights reserved.</p>
+      <p>&copy; {{year}} {{appName}}. All rights reserved.</p>
     </div>
   </div>
 </body>
-</html>`;
-}
+</html>

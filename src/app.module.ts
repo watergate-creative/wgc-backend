@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { getMetadataArgsStorage } from 'typeorm';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
@@ -17,7 +17,7 @@ import { NotificationsModule } from './notifications/notifications.module.js';
 import { FormsModule } from './forms/forms.module.js';
 
 // Global modules
-import { EmailModule } from './email/email.module.js';
+import { MailModule } from './email/mail.module.js';
 import { LoggerModule } from './logger/logger.module.js';
 
 // Guards
@@ -28,6 +28,9 @@ import { RolesGuard } from './auth/guards/roles.guard.js';
 import { GlobalExceptionFilter } from './common/filters/http-exception.filter.js';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor.js';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor.js';
+import { RedisModule } from './common/redis/redis.module.js';
+import { YoutubeModule } from './youtube/youtube.module.js';
+import { BullModule } from '@nestjs/bullmq';
 
 @Module({
   imports: [
@@ -35,9 +38,22 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor.js
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+    RedisModule,
 
     // Cron Jobs Scheduling
     ScheduleModule.forRoot(),
+    BullModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        connection: {
+          host: configService.getOrThrow('REDIS_HOST'),
+          port: configService.getOrThrow('REDIS_PORT'),
+          password: configService.get('REDIS_PASSWORD'),
+        },
+      }),
+    }),
+    MailModule,
 
     // Database
     TypeOrmModule.forRoot({
@@ -50,12 +66,12 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor.js
       autoLoadEntities: true,
       entities: getMetadataArgsStorage().tables.map((tbl) => tbl.target),
       synchronize: true, // Temporarily true for active development
-      ssl: true,
-      extra: {
-        ssl: {
-          rejectUnauthorized: false,
-        },
-      },
+      // ssl: true,
+      // extra: {
+      //   ssl: {
+      //     rejectUnauthorized: false,
+      //   },
+      // },
     }),
 
     // Rate Limiting — 100 requests per minute globally
@@ -70,7 +86,6 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor.js
 
     // Global modules
     LoggerModule,
-    EmailModule,
 
     // Feature modules
     AuthModule,
@@ -79,6 +94,7 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor.js
     ParticipantModule,
     NotificationsModule,
     FormsModule,
+    YoutubeModule
   ],
   controllers: [AppController],
   providers: [

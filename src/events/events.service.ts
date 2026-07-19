@@ -37,7 +37,7 @@ export class EventsService {
   async findAll(query: EventQueryDto): Promise<{ data: Event[]; total: number }> {
     const qb = this.eventRepository
       .createQueryBuilder('event')
-      .loadRelationCountAndMap('event.participantCount', 'event.participants');
+      .loadRelationIdAndMap('event.participantCount', 'event.participants');
 
     this.applyFilters(qb, query);
 
@@ -49,21 +49,23 @@ export class EventsService {
     return { data, total };
   }
 
-  async findUpcoming(limit = 10): Promise<Event[]> {
-    return this.eventRepository
-      .createQueryBuilder('event')
-      .loadRelationCountAndMap('event.participantCount', 'event.participants')
-      .where('event.status = :status', { status: EventStatus.PUBLISHED })
-      .andWhere('event.endDate >= :now', { now: new Date() })
-      .orderBy('event.startDate', 'ASC')
-      .take(limit)
-      .getMany();
-  }
+ async findUpcoming(limit = 10): Promise<Event[]> {
+  const query = this.eventRepository.createQueryBuilder('event');
+  
+  return query
+    // Ensure this is called directly on the instance
+    .loadRelationIdAndMap('event.participantCount', 'event.participants')
+    .where('event.status = :status', { status: EventStatus.PUBLISHED })
+    .andWhere('event.endDate >= :now', { now: new Date() })
+    .orderBy('event.startDate', 'ASC')
+    .take(limit)
+    .getMany();
+}
 
   async findBySlug(slug: string): Promise<Event> {
     const event = await this.eventRepository.findOne({
       where: { slug },
-      relations: ['participants'],
+      relations: {'participants':true},
     });
     if (!event) {
       throw new NotFoundException(`Event "${slug}" not found`);
@@ -74,7 +76,7 @@ export class EventsService {
   async findOne(id: string): Promise<Event> {
     const event = await this.eventRepository.findOne({
       where: { id },
-      relations: ['participants'],
+      relations: {'participants':true},
     });
     if (!event) {
       throw new NotFoundException(`Event with ID "${id}" not found`);

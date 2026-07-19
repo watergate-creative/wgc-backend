@@ -4,7 +4,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between } from 'typeorm';
 import { Event, EventStatus } from '../events/entities/event.entity.js';
 import { Participant } from '../participant/entities/participant.entity.js';
-import { EmailService } from '../email/email.service.js';
+import { MailService } from '../email/mail.service.js';
 import { TermiiService } from './termii.service.js';
 
 @Injectable()
@@ -16,7 +16,7 @@ export class CountdownCronService {
     private readonly eventRepository: Repository<Event>,
     @InjectRepository(Participant)
     private readonly participantRepository: Repository<Participant>,
-    private readonly emailService: EmailService,
+    private readonly mailService: MailService,
     private readonly termiiService: TermiiService,
   ) {}
 
@@ -64,33 +64,34 @@ export class CountdownCronService {
             this.logger.log(
               `Event "${event.title}" is ${daysRemaining} day(s) away. Notifying ${participants.length} participants.`,
             );
-
+            
+            
             // Send Email + SMS concurrently for each participant
             await Promise.allSettled(
               participants.flatMap((participant) => {
                 const notifications: Promise<void>[] = [];
-
-                // Email countdown
+          
                 notifications.push(
-                  this.emailService.sendCountdownEmail(
-                    participant.email,
-                    {
-                      firstName: participant.firstName,
-                      eventTitle: event.title,
-                      startDate: event.startDate,
-                      endDate: event.endDate,
-                      dailySchedule: event.dailySchedule,
-                      location: event.location,
+                  this.mailService.queueEmail({
+                    to: participant.email,
+                    subject: 'Welcome to the Event!',
+                    template: 'event-countdown',
+                    context: {
+                      firstName: 'Samuel',
+                      timeRemaining: 'NestJS Summit 2026',
+                      eventDate: `${event.startDate} - ${event.endDate}`,
+                      eventName: event.title,
+                      eventTime: event.dailySchedule,
+                      location:event.location
                     },
-                    daysRemaining,
-                  ),
+                  }),
                 );
 
                 // SMS countdown (only if participant has a phone number)
                 if (participant.phone) {
-                  const dayWord =
-                    daysRemaining === 1 ? 'day' : 'days';
+                  const dayWord = daysRemaining === 1 ? 'day' : 'days';
                   const smsMessage = `Hi ${participant.firstName}! ${event.title} is ${daysRemaining} ${dayWord} away. See you at ${event.location}. - WGC`;
+                  
                   notifications.push(
                     this.termiiService.sendSms({
                       to: participant.phone,

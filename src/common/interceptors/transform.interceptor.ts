@@ -10,19 +10,33 @@ import { ApiResponse } from '../dto/api-response.dto.js';
 
 @Injectable()
 export class TransformInterceptor<T>
-  implements NestInterceptor<T, ApiResponse<T>>
+  implements NestInterceptor<T, any>
 {
   intercept(
     context: ExecutionContext,
     next: CallHandler,
-  ): Observable<ApiResponse<T>> {
+  ): Observable<any> {
     return next.handle().pipe(
-      map((data) => {
-        // If the controller already returned an ApiResponse, pass it through
-        if (data instanceof ApiResponse) {
-          return data;
+      map((res) => {
+        if (res instanceof ApiResponse) {
+          return res;
         }
-        return ApiResponse.ok(data);
+
+        if (
+          res &&
+          typeof res === 'object' &&
+          !Array.isArray(res) &&
+          'data' in res &&
+          ('currentPage' in res || 'totalRecords' in res || 'meta' in res)
+        ) {
+        
+          const { data, ...paginationMeta } = res;
+          const response = ApiResponse.ok(data) as any;
+          response.pagination = paginationMeta;
+          
+          return response;
+        }
+        return ApiResponse.ok(res);
       }),
     );
   }
