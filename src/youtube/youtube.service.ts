@@ -17,7 +17,7 @@ export class YoutubeSearchService {
     private readonly resilientRedis: ResilientRedisService,
   ) {}
 
-  async querySearch(rawQuery: YoutubeSearchQueryDto): Promise<PaginatedResult<YoutubeVideo>> {
+ async querySearch(rawQuery: YoutubeSearchQueryDto): Promise<PaginatedResult<YoutubeVideo>> {
     const sanitized = rawQuery?.search?.trim()?.toLowerCase() || '';
     const categoryFilter = rawQuery?.category?.trim() || '';
     const limit = Number(rawQuery?.limit) || 10;
@@ -28,8 +28,10 @@ export class YoutubeSearchService {
       return this.getCachedLatest(skip, limit, currentPage);
     }
 
-    const cacheKey = `${YOUTUBE_CACHE.SEARCH_PREFIX}${sanitized}:cat_${categoryFilter.toLowerCase()}:${skip}:${limit}`;
-    
+    // Normalizing category to lowercase for the cache key to prevent duplicate caches for "Backend" and "backend"
+    const normalizedCategory = categoryFilter.toLowerCase();
+    const cacheKey = `${YOUTUBE_CACHE.SEARCH_PREFIX}${sanitized}:cat_${normalizedCategory}:${skip}:${limit}`;
+  
     // 1. Safe Redis lookup (returns null instantly if circuit is OPEN)
     const cachedResult = await this.resilientRedis.get(cacheKey);
     if (cachedResult) {
@@ -40,15 +42,20 @@ export class YoutubeSearchService {
     const redisIndex = await this.resilientRedis.get(YOUTUBE_CACHE.SEARCH_INDEX_KEY);
     if (redisIndex) {
       const index: any[] = JSON.parse(redisIndex);
+      
       const filtered = index.filter(item => {
-        const matchesText = !sanitized || 
-          item.title.includes(sanitized) || 
-          item.description.includes(sanitized);
-          
-        const matchesCategory = !categoryFilter || 
-          item.category.some((c: string) => c.toLowerCase() === categoryFilter.toLowerCase());
+        // Safe array check to prevent TypeError crashes
+        const matchesCategory = !categoryFilter || (
+          Array.isArray(item.category) && 
+          item.category.some((c: string) => c.toLowerCase() === normalizedCategory)
+        );
 
-        return matchesText && matchesCategory;
+        const matchesText = !sanitized || 
+          (item.title && item.title.toLowerCase().includes(sanitized)) || 
+          (item.description && item.description.toLowerCase().includes(sanitized));
+
+        // Category is primary, so evaluate it first for short-circuiting
+        return matchesCategory && matchesText;
       });
 
       const paginatedData = filtered.slice(skip, skip + limit);
@@ -64,15 +71,14 @@ export class YoutubeSearchService {
       return response;
     }
 
-    // 3. High-Performance PostgreSQL GIN Index Fallback Query
     this.logger.debug('Executing PostgreSQL GIN-optimized fallback query.');
     
     const qb = this.videoRepository.createQueryBuilder('video');
 
+    // 3. Category search using text casting to hit the pg_trgm index perfectly
     if (categoryFilter) {
-      // ⚡ The @> operator uses the GIN index to verify array containment in O(1) time
-      qb.andWhere('video.category @> :categoryFilter::jsonb', {
-        categoryFilter: JSON.stringify([categoryFilter]),
+      qb.andWhere('video.category::text ILIKE :categoryFilter', { 
+        categoryFilter: `%${categoryFilter}%` 
       });
     }
 

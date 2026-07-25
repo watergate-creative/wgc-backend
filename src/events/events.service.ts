@@ -124,6 +124,12 @@ export class EventsService {
   }
 
   private applyFilters(qb: SelectQueryBuilder<Event>, query: EventQueryDto): void {
+    query.fromDate = new Date().toISOString();
+    
+    qb.andWhere('event.startDate >= :fromDate', {
+      fromDate: query.fromDate,
+    });
+    
     if (query.type) {
       qb.andWhere('event.type = :type', {
         type: query.type,
@@ -140,13 +146,7 @@ export class EventsService {
         { search: `%${query.search}%` },
       );
     }
-
-    if (query.fromDate) {
-      qb.andWhere('event.startDate >= :fromDate', {
-        fromDate: new Date(query.fromDate),
-      });
-    }
-
+    
     if (query.toDate) {
       qb.andWhere('event.endDate <= :toDate', {
         toDate: new Date(query.toDate),
