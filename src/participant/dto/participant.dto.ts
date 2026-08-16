@@ -10,6 +10,7 @@ import {
   IsBoolean,
 } from 'class-validator';
 import { PaginationQueryDto } from '../../common/dto/pagination.dto.js';
+import { Transform } from 'class-transformer';
 
 export class RegisterParticipantDto {
   @ApiProperty()
@@ -46,6 +47,39 @@ export class RegisterParticipantDto {
   @IsString()
   @IsOptional()
   placeOfWorship?: string;
+
+  @ApiPropertyOptional({ type: Boolean })
+  @Transform(({ value }) => {
+    // Converts "true" (string) or true (boolean) to true. Everything else (including "") becomes false.
+    if (value === 'true' || value === true) return true;
+    return false;
+  })
+  @IsBoolean()
+  @IsOptional()
+  accommodation?: boolean;
+
+  @ApiProperty()
+  @IsBoolean()
+  consent: boolean;
+
+  @ApiProperty()
+  @IsBoolean()
+  contactConsent: boolean;
+
+  @ApiProperty()
+  @IsUUID()
+  @IsNotEmpty()
+  eventId: string;
+
+  @ApiPropertyOptional({ description: 'yes or no' })
+  @IsString()
+  @IsOptional()
+  member?: string;
+
+  @ApiProperty()
+  @IsArray()
+  @IsString({ each: true })
+  selectedDays: string[];
 }
 
 export class BulkRegistrationDto {

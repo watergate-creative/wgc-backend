@@ -29,6 +29,9 @@ export class Participant extends BaseEntity {
   @Column({ type: 'boolean', default: false })
   hasAttended: boolean;
 
+  @Column({ type: 'boolean', default: false })
+  accommodation: boolean;
+
   @Column({ type: 'timestamptz', nullable: true })
   checkInTime: Date;
 

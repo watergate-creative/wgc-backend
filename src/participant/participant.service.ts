@@ -92,35 +92,36 @@ export class ParticipantService {
     return saved;
   }
 
-  async registerBulk(dto: BulkRegistrationDto): Promise<{
-    successful: { eventId: string; participantId: string }[];
-    failed: { eventId: string; reason: string }[];
-  }> {
-    const successful: { eventId: string; participantId: string }[] = [];
-    const failed: { eventId: string; reason: string }[] = [];
+  // async registerBulk(dto: BulkRegistrationDto): Promise<{
+  //   successful: { eventId: string; participantId: string }[];
+  //   failed: { eventId: string; reason: string }[];
+  // }> {
+  //   const successful: { eventId: string; participantId: string }[] = [];
+  //   const failed: { eventId: string; reason: string }[] = [];
 
-    for (const eventId of dto.eventIds) {
-      try {
-        const participant = await this.register(eventId, {
-          firstName: dto.firstName,
-          lastName: dto.lastName,
-          email: dto.email,
-          phone: dto.phone,
-          gender: dto.gender,
-          address: dto.address,
-          placeOfWorship: dto.placeOfWorship,
-        });
-        successful.push({ eventId, participantId: participant.id });
-      } catch (error) {
-        failed.push({
-          eventId,
-          reason: error instanceof Error ? error.message : 'Unknown error',
-        });
-      }
-    }
+  //   for (const eventId of dto.eventIds) {
+  //     try {
+  //       const participant = await this.register(eventId, {
+  //         firstName: dto.firstName,
+  //         lastName: dto.lastName,
+  //         email: dto.email,
+  //         phone: dto.phone,
+  //         gender: dto.gender,
+  //         address: dto.address,
+  //         placeOfWorship: dto.placeOfWorship,
+  //         selectedDays: dto.se
+  //       });
+  //       successful.push({ eventId, participantId: participant.id });
+  //     } catch (error) {
+  //       failed.push({
+  //         eventId,
+  //         reason: error instanceof Error ? error.message : 'Unknown error',
+  //       });
+  //     }
+  //   }
 
-    return { successful, failed };
-  }
+  //   return { successful, failed };
+  // }
 
   async checkIn(eventId: string, participantId: string): Promise<Participant> {
     const participant = await this.participantRepository.findOne({

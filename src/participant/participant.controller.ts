@@ -45,13 +45,13 @@ export class ParticipantController {
     return this.participantService.register(eventId, dto);
   }
 
-  @ApiBearerAuth()
-  @Roles('admin', 'editor')
-  @Post('events/participants/bulk-register')
-  @ApiOperation({ summary: 'Register a participant for multiple events at once' })
-  async registerBulk(@Body() dto: BulkRegistrationDto) {
-    return this.participantService.registerBulk(dto);
-  }
+  // @ApiBearerAuth()
+  // @Roles('admin', 'editor')
+  // @Post('events/participants/bulk-register')
+  // @ApiOperation({ summary: 'Register a participant for multiple events at once' })
+  // async registerBulk(@Body() dto: BulkRegistrationDto) {
+  //   return this.participantService.registerBulk(dto);
+  // }
 
   @ApiBearerAuth()
   @Roles('admin', 'editor', 'user')
