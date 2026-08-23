@@ -10,6 +10,7 @@ import {
   Delete,
   HttpCode,
   HttpStatus,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -39,7 +40,7 @@ export class ParticipantController {
   @ApiOperation({ summary: 'Register for an event natively' })
   @ApiResponse({ status: 201, description: 'Registration successful' })
   async register(
-    @Param('eventId') eventId: string,
+    @Param('eventId', ParseUUIDPipe) eventId: string,
     @Body() dto: RegisterParticipantDto,
   ) {
     return this.participantService.register(eventId, dto);

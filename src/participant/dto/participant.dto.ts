@@ -66,11 +66,6 @@ export class RegisterParticipantDto {
   @IsBoolean()
   contactConsent: boolean;
 
-  @ApiProperty()
-  @IsUUID()
-  @IsNotEmpty()
-  eventId: string;
-
   @ApiPropertyOptional({ description: 'yes or no' })
   @IsString()
   @IsOptional()
