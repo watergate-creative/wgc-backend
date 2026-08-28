@@ -236,36 +236,65 @@ export class EventsService {
 
   // ─── PRIVATE HELPERS ──────────────────────────────────────────
 
+  // private applyFilters(qb: SelectQueryBuilder<Event>, query: EventQueryDto): void {
+  //   query.fromDate = new Date().toISOString();
+    
+  //   qb.andWhere('event.startDate >= :fromDate', {
+  //     fromDate: query.fromDate,
+  //   });
+    
+  //   if (query.type) {
+  //     qb.andWhere('event.type = :type', {
+  //       type: query.type,
+  //     });
+  //   }
+
+  //   if (query.status) {
+  //     qb.andWhere('event.status = :status', { status: query.status });
+  //   }
+
+  //   if (query.search) {
+  //     qb.andWhere(
+  //       '(LOWER(event.title) LIKE LOWER(:search) OR LOWER(event.description) LIKE LOWER(:search))',
+  //       { search: `%${query.search}%` },
+  //     );
+  //   }
+    
+  //   if (query.toDate) {
+  //     qb.andWhere('event.endDate <= :toDate', {
+  //       toDate: new Date(query.toDate),
+  //     });
+  //   }
+  // }
+
   private applyFilters(qb: SelectQueryBuilder<Event>, query: EventQueryDto): void {
-    query.fromDate = new Date().toISOString();
-    
-    qb.andWhere('event.startDate >= :fromDate', {
-      fromDate: query.fromDate,
+ 
+  const { type, status, search, fromDate, toDate } = query;
+  const effectiveFromDate = fromDate ? new Date(fromDate) : new Date();
+
+  qb.andWhere('event.endDate >= :effectiveFromDate', { effectiveFromDate });
+
+  if (toDate) {
+    qb.andWhere('event.startDate <= :effectiveEndDate', { 
+      effectiveEndDate: new Date(toDate) 
     });
-    
-    if (query.type) {
-      qb.andWhere('event.type = :type', {
-        type: query.type,
-      });
-    }
-
-    if (query.status) {
-      qb.andWhere('event.status = :status', { status: query.status });
-    }
-
-    if (query.search) {
-      qb.andWhere(
-        '(LOWER(event.title) LIKE LOWER(:search) OR LOWER(event.description) LIKE LOWER(:search))',
-        { search: `%${query.search}%` },
-      );
-    }
-    
-    if (query.toDate) {
-      qb.andWhere('event.endDate <= :toDate', {
-        toDate: new Date(query.toDate),
-      });
-    }
   }
+
+  if (type) {
+    qb.andWhere('event.type = :type', { type });
+  }
+
+  if (status) {
+    qb.andWhere('event.status = :status', { status });
+  }
+
+  if (search) {
+    qb.andWhere(
+      '(event.title ILIKE :search OR event.description ILIKE :search)',
+      { search: `%${search}%` },
+    );
+  }
+}
 
   private generateSlug(title: string): string {
     const baseSlug = title
