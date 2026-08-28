@@ -1,18 +1,6 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import * as nodemailer from 'nodemailer';
 
-export interface EventEmailDetails {
-  firstName: string;
-  eventTitle: string;
-  startDate: Date;
-  endDate: Date;
-  dailySchedule?: string;
-  location: string;
-  address?: string;
-}
-
-// import { Injectable, Logger } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { MAIL_QUEUE, SEND_EMAIL_JOB, SendEmailJobPayload } from './mail.constants.js';

@@ -11,8 +11,11 @@ import {
   UpdateFormEntryDto,
   FormEntryQueryDto,
 } from './dto/form.dto.js';
-import { MailService } from '../email/mail.service.js';
-import { TermiiService } from '../notifications/termii.service.js';
+import { NotificationService } from '../notifications/notification.service.js';
+import {
+  NotificationType,
+  DeliveryChannel,
+} from '../notifications/types/notification-types.js';
 
 @Injectable()
 export class FormsService {
@@ -21,8 +24,7 @@ export class FormsService {
   constructor(
     @InjectRepository(FormEntry)
     private readonly formEntryRepository: Repository<FormEntry>,
-    private readonly mailService: MailService,
-    private readonly termiiService: TermiiService,
+    private readonly notificationService: NotificationService,
   ) {}
 
   // ─── CREATE (Public submission) ──────────────────────────────
@@ -34,70 +36,30 @@ export class FormsService {
       `Form entry created: type="${saved.type}" from ${saved.email}`,
     );
 
-    await this.mailService.queueEmail({
-                  to: entry.email,
-                  subject: "We Receive Your Feedback",
-                  template: 'form-notification', // Matches 'welcome.hbs' in your templates folder
-                  context: {
-                    formFields: 'Samuel',
-                    formTitle: entry.fullName,
-                    submittedAt: entry.type,
-                    submittedBy: entry.data,
-                    year: new Date().getFullYear()
-                  }
-                });
+    // ── Send acknowledgement via unified notification service ──
+    this.notificationService
+      .send({
+        type: NotificationType.FORM_SUBMISSION_ACKNOWLEDGEMENT,
+        channels: [DeliveryChannel.EMAIL, DeliveryChannel.SMS],
+        recipient: {
+          email: saved.email,
+          phone: saved.phone ?? undefined,
+          name: saved.fullName,
+        },
+        context: {
+          fullName: saved.fullName,
+          formType: saved.type,
+          data: saved.data,
+          year: new Date().getFullYear(),
+        },
+      })
+      .catch((error) => {
+        this.logger.error(
+          `Failed to send form acknowledgement to ${saved.email}: ${error.message}`,
+        );
+      });
 
     return saved;
-  }
-
-  // ─── NOTIFICATION: EMAIL-FIRST, SMS FALLBACK ─────────────────
-
-  private async sendNotification(entry: FormEntry): Promise<void> {
-    try {
-      
-      // Fallback to SMS only if phone is provided and email failed
-      if (entry.phone) {
-        try {
-          const smsMessage = this.buildSmsMessage(entry);
-          await this.termiiService.sendSms({
-            to: entry.phone,
-            sms: smsMessage,
-          });
-
-          this.logger.log(
-            `SMS fallback sent to ${entry.phone} for type="${entry.type}"`,
-          );
-        } catch (smsError: any) {
-          this.logger.error(
-            `SMS fallback also failed for ${entry.phone}: ${smsError.message}`,
-          );
-        }
-      } else {
-        this.logger.warn(
-          `No phone number available for SMS fallback. Notification skipped entirely for ${entry.email}.`,
-        );
-      }
-    }catch(error: any)
-    {
-      this.logger.error(
-      `SMS fallback also failed for ${entry.phone}: ${error.message}`,
-    );
-    }
-  }
-  
-
-  private buildSmsMessage(entry: FormEntry): string {
-    const messages: Record<string, string> = {
-      'Volunteer': `Hi ${entry.fullName}, thank you for signing up to volunteer at WaterGate Church! Our team will reach out to you shortly.`,
-      'Naming Ceremony': `Hi ${entry.fullName}, your naming ceremony registration has been received. We will contact you to confirm the details.`,
-      'New Comers': `Hi ${entry.fullName}, welcome to WaterGate Church! We are so glad you connected with us. Expect a follow-up from our team.`,
-      'Altar Call': `Hi ${entry.fullName}, what a beautiful decision! We are here to support you. Someone from our pastoral team will be in touch.`,
-      'Pre-Marital Counselling': `Hi ${entry.fullName}, your pre-marital counselling registration has been received. Our counselling team will reach out to schedule your sessions.`,
-      'Counselling': `Hi ${entry.fullName}, your counselling request has been received. A member of our team will contact you to arrange a session.`,
-      'Feedback': `Hi ${entry.fullName}, thank you for your feedback! Your thoughts help us serve better.`,
-      'Testimony': `Hi ${entry.fullName}, thank you for sharing your testimony! Your story is an encouragement to us all.`,
-    };
-    return messages[entry.type] || `Hi ${entry.fullName}, your form submission has been received. Thank you!`;
   }
 
   // ─── FIND ALL (Admin, paginated + filtered) ──────────────────

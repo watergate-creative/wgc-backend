@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: #f4f4f7; margin: 0; padding: 0; -webkit-font-smoothing: antialiased; }
+    .container { max-width: 600px; margin: 20px auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+    .header { background: linear-gradient(135deg, #1a237e, #283593); color: #ffffff; text-align: center; padding: 32px 24px; }
+    .header h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.5px; }
+    .body { padding: 32px 24px; color: #333333; line-height: 1.7; }
+    .newsletter-content { font-size: 15px; color: #1e293b; }
+    .newsletter-content img { max-width: 100%; height: auto; border-radius: 8px; }
+    .newsletter-content h1, .newsletter-content h2, .newsletter-content h3 { color: #1a237e; }
+    .newsletter-content a { color: #283593; text-decoration: underline; }
+    .divider { height: 1px; background: #e2e8f0; margin: 24px 0; }
+    .footer { text-align: center; padding: 24px; font-size: 12px; color: #94a3b8; border-top: 1px solid #f1f5f9; background: #fafafa; }
+    .footer a { color: #64748b; text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>{{subject}}</h1>
+    </div>
+    <div class="body">
+      {{#if preheader}}
+      <p style="font-size: 14px; color: #64748b; margin-top: 0;">{{preheader}}</p>
+      <div class="divider"></div>
+      {{/if}}
+
+      <div class="newsletter-content">
+        {{{htmlContent}}}
+      </div>
+
+      <div class="divider"></div>
+      <p style="font-size: 13px; color: #94a3b8; text-align: center;">
+        You are receiving this email because you are connected with Watergate Church Global.
+      </p>
+    </div>
+    <div class="footer">
+      <p>&copy; {{year}} Watergate Church Global. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html>

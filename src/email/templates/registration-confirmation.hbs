@@ -63,10 +63,14 @@
           </span>
         </div>
 
-        {{#if dailySchedule}}
+        {{#if selectedDays}}
         <div class="ticket-row">
-          <span class="ticket-label">Daily Schedule / Time</span>
-          <span class="schedule-badge">⏰ {{dailySchedule}}</span>
+          <span class="ticket-label">Your Selected Days</span>
+          <div style="margin-top: 4px;">
+            {{#each selectedDays}}
+              <span class="schedule-badge">📅 {{this}}</span>
+            {{/each}}
+          </div>
         </div>
         {{/if}}
 

@@ -1,5 +1,6 @@
 import { BaseEntity } from '../../common/entities/base.entities.js';
-import { Column, Entity } from 'typeorm';
+import { Column, Entity, OneToOne } from 'typeorm';
+import { MinisterProfile } from '../../sessions/entities/minister-profile.entity.js';
 
 export enum UserRole {
   ADMIN = 'admin',
@@ -33,4 +34,7 @@ export class User extends BaseEntity {
 
   @Column({ type: 'varchar', nullable: true, select: false })
   refreshToken: string | null;
+
+  @OneToOne(() => MinisterProfile, (profile) => profile.user, { cascade: true })
+  ministerProfile: MinisterProfile;
 }

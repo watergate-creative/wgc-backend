@@ -2,11 +2,21 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between } from 'typeorm';
-import { Event, EventStatus } from '../events/entities/event.entity.js';
-import { Participant } from '../participant/entities/participant.entity.js';
-import { MailService } from '../email/mail.service.js';
-import { TermiiService } from './termii.service.js';
+import { Event, EventStatus } from '../../events/entities/event.entity.js';
+import { Participant } from '../../participant/entities/participant.entity.js';
+import { NotificationService } from '../notification.service.js';
+import {
+  NotificationType,
+  DeliveryChannel,
+} from '../types/notification-types.js';
 
+/**
+ * Daily cron that sends countdown reminders to registered participants
+ * for events starting within the next 7 days.
+ *
+ * Refactored to use the unified NotificationService façade instead
+ * of directly coupling to MailService + TermiiService.
+ */
 @Injectable()
 export class CountdownCronService {
   private readonly logger = new Logger(CountdownCronService.name);
@@ -16,8 +26,7 @@ export class CountdownCronService {
     private readonly eventRepository: Repository<Event>,
     @InjectRepository(Participant)
     private readonly participantRepository: Repository<Participant>,
-    private readonly mailService: MailService,
-    private readonly termiiService: TermiiService,
+    private readonly notificationService: NotificationService,
   ) {}
 
   @Cron('0 12 * * *') // Runs every day at 12:00 PM (Noon)
@@ -64,44 +73,30 @@ export class CountdownCronService {
             this.logger.log(
               `Event "${event.title}" is ${daysRemaining} day(s) away. Notifying ${participants.length} participants.`,
             );
-            
-            
-            // Send Email + SMS concurrently for each participant
+
+            // Dispatch notifications concurrently
             await Promise.allSettled(
-              participants.flatMap((participant) => {
-                const notifications: Promise<void>[] = [];
-          
-                notifications.push(
-                  this.mailService.queueEmail({
-                    to: participant.email,
-                    subject: 'Welcome to the Event!',
-                    template: 'event-countdown',
-                    context: {
-                      firstName: 'Samuel',
-                      timeRemaining: 'NestJS Summit 2026',
-                      eventDate: `${event.startDate} - ${event.endDate}`,
-                      eventName: event.title,
-                      eventTime: event.dailySchedule,
-                      location:event.location
-                    },
-                  }),
-                );
-
-                // SMS countdown (only if participant has a phone number)
-                if (participant.phone) {
-                  const dayWord = daysRemaining === 1 ? 'day' : 'days';
-                  const smsMessage = `Hi ${participant.firstName}! ${event.title} is ${daysRemaining} ${dayWord} away. See you at ${event.location}. - WGC`;
-                  
-                  notifications.push(
-                    this.termiiService.sendSms({
-                      to: participant.phone,
-                      sms: smsMessage,
-                    }),
-                  );
-                }
-
-                return notifications;
-              }),
+              participants.map((participant) =>
+                this.notificationService.send({
+                  type: NotificationType.EVENT_COUNTDOWN_REMINDER,
+                  channels: [DeliveryChannel.EMAIL, DeliveryChannel.SMS],
+                  recipient: {
+                    email: participant.email,
+                    phone: participant.phone ?? undefined,
+                    name: participant.firstName,
+                  },
+                  context: {
+                    firstName: participant.firstName,
+                    eventName: event.title,
+                    eventDate: `${event.startDate} - ${event.endDate}`,
+                    eventTime: event.dailySchedule ?? undefined,
+                    location: event.location,
+                    daysRemaining,
+                    timeRemaining: `${daysRemaining} day${daysRemaining === 1 ? '' : 's'}`,
+                    year: new Date().getFullYear(),
+                  },
+                }),
+              ),
             );
           }
         }

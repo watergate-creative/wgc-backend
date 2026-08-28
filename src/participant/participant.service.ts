@@ -10,9 +10,15 @@ import { Repository } from 'typeorm';
 import { Participant } from './entities/participant.entity.js';
 import { RegisterParticipantDto, BulkRegistrationDto, ParticipantQueryDto } from './dto/participant.dto.js';
 import { EventsService } from '../events/events.service.js';
-import { MailService } from '../email/mail.service.js';
+import { NotificationService } from '../notifications/notification.service.js';
+import {
+  NotificationType,
+  DeliveryChannel,
+} from '../notifications/types/notification-types.js';
 import { EventStatus } from '../events/entities/event.entity.js';
-import { TermiiService } from '../notifications/termii.service.js';
+import { ResilientRedisService } from '../infrastructure/redis/resilient-redis-service.js';
+import { PARTICIPANT_CACHE, EVENT_CACHE } from '../common/redis/cache.constants.js';
+import { createHash } from 'crypto';
 
 @Injectable()
 export class ParticipantService {
@@ -22,9 +28,44 @@ export class ParticipantService {
     @InjectRepository(Participant)
     private readonly participantRepository: Repository<Participant>,
     private readonly eventsService: EventsService,
-    private readonly emailService: MailService,
-    private readonly termiiService: TermiiService,
+    private readonly notificationService: NotificationService,
+    private readonly redis: ResilientRedisService,
   ) {}
+
+  // ─── CACHE HELPERS ────────────────────────────────────────────
+
+  private hashQuery(params: Record<string, unknown>): string {
+    const sorted = Object.keys(params)
+      .sort()
+      .reduce<Record<string, unknown>>((acc, key) => {
+        if (params[key] !== undefined && params[key] !== null) {
+          acc[key] = params[key];
+        }
+        return acc;
+      }, {});
+
+    return createHash('sha256')
+      .update(JSON.stringify(sorted))
+      .digest('hex')
+      .slice(0, 16);
+  }
+
+  /** Invalidate participant caches scoped to a specific event. */
+  private async invalidateParticipantCache(eventId: string): Promise<void> {
+    await this.redis.deleteByPrefix(`${PARTICIPANT_CACHE.LIST_PREFIX}${eventId}`);
+  }
+
+  /** Invalidate all email-lookup caches. */
+  private async invalidateLookupCache(): Promise<void> {
+    await this.redis.deleteByPrefix(PARTICIPANT_CACHE.LOOKUP_PREFIX);
+  }
+
+  /** Invalidate event caches (registration count changed). */
+  private async invalidateEventCache(): Promise<void> {
+    await this.redis.deleteByPrefix(EVENT_CACHE.NAMESPACE);
+  }
+
+  // ─── COMMANDS ─────────────────────────────────────────────────
 
   async register(
     eventId: string,
@@ -56,38 +97,43 @@ export class ParticipantService {
     const saved = await this.participantRepository.save(participant);
     await this.eventsService.incrementRegistrationCount(eventId);
 
-    await this.emailService.queueEmail({
-        to: email,
-        subject: `${event.title.toUpperCase()} REGISTRATION SUCCESSFUL`,
-        template: 'registration-confirmation',
+    // ── Send registration confirmation via unified notification service ──
+    this.notificationService
+      .send({
+        type: NotificationType.EVENT_REGISTRATION_CONFIRMATION,
+        channels: [DeliveryChannel.EMAIL, DeliveryChannel.SMS],
+        recipient: {
+          email,
+          phone: dto.phone ?? undefined,
+          name: dto.firstName,
+        },
         context: {
           firstName: participant.firstName,
-          bannerImageUrl: event.bannerImageUrl,
-          startDate: event.startDate,                     
-          endDate: event.endDate,                     
-          dailySchedule: event.dailySchedule,                     
-          title: event.title,                     
-          location: event.location,                     
-          description: event.description, 
+          bannerImageUrl: event.bannerImageUrl ?? undefined,
+          startDate: event.startDate,
+          endDate: event.endDate,
+          selectedDays: saved.selectedDays,
+          title: event.title,
+          location: event.location,
+          description: event.description ?? undefined,
           registrationId: participant.id,
-          year: new Date().getFullYear()                  
-        }
+          year: new Date().getFullYear(),
+        },
       })
       .catch((error) => {
         this.logger.error(
-          `Failed to send confirmation email to ${email}: ${error.message}`,
+          `Failed to send registration notification to ${email}: ${error.message}`,
         );
       });
-    
-    // Trigger Termii SMS Notification if phone is provided
-    if (dto.phone) {
-      const smsMessage = `Hi ${dto.firstName}, your registration for ${event.title} is confirmed. We look forward to seeing you! - WGC`;
-      this.termiiService.sendSms({ to: dto.phone, sms: smsMessage }).catch((e) => {
-        this.logger.error(`SMS Error: ${e.message}`);
-      });
-    }
 
     this.logger.log(`New participant registration for event "${event.title}": ${email}`);
+
+    // Invalidate participant + event caches (registration count changed)
+    await Promise.all([
+      this.invalidateParticipantCache(eventId),
+      this.invalidateLookupCache(),
+      this.invalidateEventCache(),
+    ]);
 
     return saved;
   }
@@ -141,15 +187,26 @@ export class ParticipantService {
     
     const updated = await this.participantRepository.save(participant);
     this.logger.log(`Participant checked in: ${participantId} for event ${eventId}`);
+
+    await this.invalidateParticipantCache(eventId);
     
     return updated;
   }
+
+  // ─── QUERIES ──────────────────────────────────────────────────
 
   async getParticipantsForEvent(
     eventId: string,
     query: ParticipantQueryDto,
   ): Promise<{ data: Participant[]; total: number }> {
     await this.eventsService.findOne(eventId);
+
+    const cacheKey = `${PARTICIPANT_CACHE.LIST_PREFIX}${eventId}:${this.hashQuery(query as unknown as Record<string, unknown>)}`;
+
+    const cached = await this.redis.get(cacheKey);
+    if (cached) {
+      return JSON.parse(cached);
+    }
 
     const qb = this.participantRepository
       .createQueryBuilder('p')
@@ -171,17 +228,29 @@ export class ParticipantService {
       .take(query.limit);
 
     const [data, total] = await qb.getManyAndCount();
-    return { data, total };
+    const result = { data, total };
+
+    await this.redis.set(cacheKey, JSON.stringify(result), 'EX', PARTICIPANT_CACHE.TTL_SEC);
+
+    return result;
   }
 
   async getRegistrationsByEmail(
     email: string,
     query: ParticipantQueryDto,
   ): Promise<{ data: Participant[]; total: number }> {
+    const normalizedEmail = email.toLowerCase();
+    const cacheKey = `${PARTICIPANT_CACHE.LOOKUP_PREFIX}${normalizedEmail}:${this.hashQuery(query as unknown as Record<string, unknown>)}`;
+
+    const cached = await this.redis.get(cacheKey);
+    if (cached) {
+      return JSON.parse(cached);
+    }
+
     const qb = this.participantRepository
       .createQueryBuilder('p')
       .leftJoinAndSelect('p.event', 'event')
-      .where('p.email = :email', { email: email.toLowerCase() });
+      .where('p.email = :email', { email: normalizedEmail });
 
     if (query.hasAttended !== undefined) {
       qb.andWhere('p.hasAttended = :hasAttended', { hasAttended: query.hasAttended });
@@ -192,7 +261,11 @@ export class ParticipantService {
       .take(query.limit);
 
     const [data, total] = await qb.getManyAndCount();
-    return { data, total };
+    const result = { data, total };
+
+    await this.redis.set(cacheKey, JSON.stringify(result), 'EX', PARTICIPANT_CACHE.TTL_SEC);
+
+    return result;
   }
 
   async removeRegistration(eventId: string, participantId: string): Promise<void> {
@@ -207,5 +280,12 @@ export class ParticipantService {
     await this.participantRepository.softRemove(participant);
     await this.eventsService.decrementRegistrationCount(eventId);
     this.logger.log(`Participant registration removed: ${participantId}`);
+
+    // Invalidate participant + event caches (registration count changed)
+    await Promise.all([
+      this.invalidateParticipantCache(eventId),
+      this.invalidateLookupCache(),
+      this.invalidateEventCache(),
+    ]);
   }
 }

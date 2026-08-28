@@ -15,6 +15,7 @@ import { ParticipantModule } from './participant/participant.module.js';
 import { FileUploadModule } from './file-upload/file-upload.module.js';
 import { NotificationsModule } from './notifications/notifications.module.js';
 import { FormsModule } from './forms/forms.module.js';
+import { SessionsModule } from './sessions/sessions.module.js';
 
 // Global modules
 import { MailModule } from './email/mail.module.js';
@@ -94,7 +95,8 @@ import { BullModule } from '@nestjs/bullmq';
     ParticipantModule,
     NotificationsModule,
     FormsModule,
-    YoutubeModule
+    YoutubeModule,
+    SessionsModule
   ],
   controllers: [AppController],
   providers: [
@@ -138,3 +140,4 @@ import { BullModule } from '@nestjs/bullmq';
   ],
 })
 export class AppModule {}
+

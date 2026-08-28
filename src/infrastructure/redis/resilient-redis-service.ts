@@ -76,6 +76,30 @@ export class ResilientRedisService implements OnModuleDestroy {
   }
 
   /**
+   * Safely deletes all keys matching a given prefix using SCAN (non-blocking).
+   * Avoids the O(N) blocking KEYS command — safe for production workloads.
+   */
+  async deleteByPrefix(prefix: string): Promise<void> {
+    if (!this.canExecute()) return;
+
+    try {
+      let cursor = '0';
+      do {
+        const [nextCursor, keys] = await this.executeWithTimeout(
+          this.redis.scan(cursor, 'MATCH', `${prefix}*`, 'COUNT', 100),
+        );
+        cursor = nextCursor;
+        if (keys.length > 0) {
+          await this.executeWithTimeout(this.redis.del(...keys));
+        }
+      } while (cursor !== '0');
+      this.onSuccess();
+    } catch (error) {
+      this.onFailure('SCAN_DEL', prefix, error);
+    }
+  }
+
+  /**
    * Safely executes a batch pipeline. Returns false if Redis is down.
    */
   async execPipeline(callback: (pipeline: ChainableCommander) => void): Promise<boolean> {

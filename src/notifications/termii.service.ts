@@ -29,6 +29,14 @@ export class TermiiService {
     }
   }
 
+  /**
+   * Returns `true` when the Termii API key is configured and SMS can be sent.
+   * Used by `SmsChannel` to determine channel availability.
+   */
+  isConfigured(): boolean {
+    return !!this.apiKey;
+  }
+
   async sendSms(payload: SendSmsPayload): Promise<void> {
     if (!this.apiKey) {
       this.logger.log(`[SMS NOT SENT - API Key missing] To: ${payload.to} | Message: ${payload.sms}`);
@@ -63,7 +71,7 @@ export class TermiiService {
           error.response?.data?.message || error.message
         }`,
       );
-      // We do not throw exceptions for notification failures to avoid breaking the core business flow
+      throw error; // Throw so that the SMS processor can catch and trigger BullMQ retries
     }
   }
 }

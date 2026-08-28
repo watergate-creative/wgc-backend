@@ -66,11 +66,6 @@ export class RegisterParticipantDto {
   @IsBoolean()
   contactConsent: boolean;
 
-  @ApiPropertyOptional({ description: 'yes or no' })
-  @IsString()
-  @IsOptional()
-  member?: string;
-
   @ApiProperty()
   @IsArray()
   @IsString({ each: true })

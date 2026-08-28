@@ -26,6 +26,15 @@ export class Participant extends BaseEntity {
   @Column({ type: 'varchar', length: 500, nullable: true })
   placeOfWorship: string;
 
+  @Column({ type: 'jsonb', nullable: true, default: [] })
+  selectedDays: string[];
+
+  @Column({ type: 'boolean', default: false })
+  consent: boolean;
+
+  @Column({ type: 'boolean', default: false })
+  contactConsent: boolean;
+
   @Column({ type: 'boolean', default: false })
   hasAttended: boolean;
 

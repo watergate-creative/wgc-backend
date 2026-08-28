@@ -171,22 +171,8 @@ export class YoutubeSyncProcessor {
       YOUTUBE_CACHE.LATEST_TTL_SEC
     );
 
-    // 2. Cache a lightweight search index in Redis for instant search/category filtering
-    const allVideos = await this.videoRepository.find({ order: { publishedAt: 'DESC' } });
-    const searchIndex = allVideos.map(v => ({
-      videoId: v.videoId,
-      title: v.title.toLowerCase(),
-      description: (v.description || '').toLowerCase(),
-      category: v.category || ['General'],
-      publishedAt: v.publishedAt,
-      duration: v.duration,
-      videoUrl: v.videoUrl,
-      embedUrl: v.embedUrl
-    }));
-
-    pipeline.set(YOUTUBE_CACHE.SEARCH_INDEX_KEY, JSON.stringify(searchIndex), 'EX', YOUTUBE_CACHE.LATEST_TTL_SEC);
     await pipeline.exec();
     
-    this.logger.log(`Redis cache warmed successfully with ${totalRecords} records and search index.`);
+    this.logger.log(`Redis cache warmed successfully with ${totalRecords} records.`);
   }
 }

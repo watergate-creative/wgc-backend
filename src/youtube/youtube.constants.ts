@@ -30,7 +30,6 @@ export const YOUTUBE_API = {
 export const YOUTUBE_CACHE = {
   // Global Cache Keys
   LATEST_VIDEOS_KEY: 'youtube:latest_pool',
-  SEARCH_INDEX_KEY: 'youtube:search_index',
   
   // Dynamic Search Prefix (appended with query, category, skip, and limit)
   SEARCH_PREFIX: 'youtube:search:',
