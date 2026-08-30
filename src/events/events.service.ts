@@ -97,7 +97,7 @@ export class EventsService {
     return result;
   }
 
- async findUpcoming(limit = 10): Promise<Event[]> {
+  async findUpcoming(limit = 10): Promise<Event[]> {
     const cacheKey = `${EVENT_CACHE.UPCOMING_PREFIX}${limit}`;
 
     const cached = await this.redis.get(cacheKey);
@@ -106,7 +106,7 @@ export class EventsService {
     }
 
     const query = this.eventRepository.createQueryBuilder('event');
-  
+
     const data = await query
       // Ensure this is called directly on the instance
       .loadRelationIdAndMap('event.participantCount', 'event.participants')
@@ -131,7 +131,7 @@ export class EventsService {
 
     const event = await this.eventRepository.findOne({
       where: { slug },
-      relations: {'participants':true},
+      relations: { 'participants': true },
     });
     if (!event) {
       throw new NotFoundException(`Event "${slug}" not found`);
@@ -152,7 +152,7 @@ export class EventsService {
 
     const event = await this.eventRepository.findOne({
       where: { id },
-      relations: {'participants':true},
+      relations: { 'participants': true },
     });
     if (!event) {
       throw new NotFoundException(`Event with ID "${id}" not found`);
@@ -236,65 +236,35 @@ export class EventsService {
 
   // ─── PRIVATE HELPERS ──────────────────────────────────────────
 
-  // private applyFilters(qb: SelectQueryBuilder<Event>, query: EventQueryDto): void {
-  //   query.fromDate = new Date().toISOString();
-    
-  //   qb.andWhere('event.startDate >= :fromDate', {
-  //     fromDate: query.fromDate,
-  //   });
-    
-  //   if (query.type) {
-  //     qb.andWhere('event.type = :type', {
-  //       type: query.type,
-  //     });
-  //   }
-
-  //   if (query.status) {
-  //     qb.andWhere('event.status = :status', { status: query.status });
-  //   }
-
-  //   if (query.search) {
-  //     qb.andWhere(
-  //       '(LOWER(event.title) LIKE LOWER(:search) OR LOWER(event.description) LIKE LOWER(:search))',
-  //       { search: `%${query.search}%` },
-  //     );
-  //   }
-    
-  //   if (query.toDate) {
-  //     qb.andWhere('event.endDate <= :toDate', {
-  //       toDate: new Date(query.toDate),
-  //     });
-  //   }
-  // }
-
   private applyFilters(qb: SelectQueryBuilder<Event>, query: EventQueryDto): void {
- 
-  const { type, status, search, fromDate, toDate } = query;
-  const effectiveFromDate = fromDate ? new Date(fromDate) : new Date();
 
-  qb.andWhere('event.endDate >= :effectiveFromDate', { effectiveFromDate });
+    const { type, status, search, fromDate, toDate } = query;
+    const effectiveFromDate = fromDate ? new Date(fromDate) : new Date();
+    effectiveFromDate.setHours(0, 0, 0, 0);
 
-  if (toDate) {
-    qb.andWhere('event.startDate <= :effectiveEndDate', { 
-      effectiveEndDate: new Date(toDate) 
-    });
+    qb.andWhere('event.endDate >= :effectiveFromDate', { effectiveFromDate });
+
+    if (toDate) {
+      qb.andWhere('event.startDate <= :effectiveEndDate', {
+        effectiveEndDate: new Date(toDate)
+      });
+    }
+
+    if (type) {
+      qb.andWhere('event.type = :type', { type });
+    }
+
+    if (status) {
+      qb.andWhere('event.status = :status', { status });
+    }
+
+    if (search) {
+      qb.andWhere(
+        '(event.title ILIKE :search OR event.description ILIKE :search)',
+        { search: `%${search}%` },
+      );
+    }
   }
-
-  if (type) {
-    qb.andWhere('event.type = :type', { type });
-  }
-
-  if (status) {
-    qb.andWhere('event.status = :status', { status });
-  }
-
-  if (search) {
-    qb.andWhere(
-      '(event.title ILIKE :search OR event.description ILIKE :search)',
-      { search: `%${search}%` },
-    );
-  }
-}
 
   private generateSlug(title: string): string {
     const baseSlug = title
