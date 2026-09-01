@@ -4,7 +4,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, SelectQueryBuilder, LessThan } from 'typeorm';
+import { Repository, SelectQueryBuilder, LessThan, In } from 'typeorm';
 import { Event, EventStatus } from './entities/event.entity.js';
 import { CreateEventDto, UpdateEventDto, EventQueryDto } from './dto/event.dto.js';
 import { ResilientRedisService } from '../infrastructure/redis/resilient-redis-service.js';
@@ -209,16 +209,42 @@ export class EventsService {
     await this.invalidateEventCache();
   }
 
-  // ─── EVENT EXPIRATION ─────────────────────────────────────────
+  // ─── EVENT LIFECYCLE TRANSITIONS ───────────────────────────────
 
   /**
-   * Marks all published events whose endDate has elapsed as completed.
-   * Called by the EventExpirationCronService daily at midnight.
+   * Transitions published events whose startDate has arrived to ongoing.
+   * Called by the EventLifecycleCronService every minute.
+   */
+  async markOngoingEvents(): Promise<number> {
+    const now = new Date();
+
+    const result = await this.eventRepository
+      .createQueryBuilder()
+      .update(Event)
+      .set({ status: EventStatus.ONGOING })
+      .where('status = :status', { status: EventStatus.PUBLISHED })
+      .andWhere('"startDate" <= :now', { now })
+      .andWhere('"endDate" >= :now', { now })
+      .execute();
+
+    const affected = result.affected ?? 0;
+
+    if (affected > 0) {
+      this.logger.log(`Transitioned ${affected} event(s) to ongoing`);
+      await this.invalidateEventCache();
+    }
+
+    return affected;
+  }
+
+  /**
+   * Marks all ongoing or published events whose endDate has elapsed as completed.
+   * Called by the EventLifecycleCronService every minute.
    */
   async markExpiredEventsAsCompleted(): Promise<number> {
     const result = await this.eventRepository.update(
       {
-        status: EventStatus.PUBLISHED,
+        status: In([EventStatus.PUBLISHED, EventStatus.ONGOING]),
         endDate: LessThan(new Date()),
       },
       { status: EventStatus.COMPLETED },
@@ -239,14 +265,13 @@ export class EventsService {
   private applyFilters(qb: SelectQueryBuilder<Event>, query: EventQueryDto): void {
 
     const { type, status, search, fromDate, toDate } = query;
-    const effectiveFromDate = fromDate ? new Date(fromDate) : new Date();
-    effectiveFromDate.setHours(0, 0, 0, 0);
+    const effectiveFromDate = fromDate ?? new Date().toISOString().slice(0, 10);
 
-    qb.andWhere('event.endDate >= :effectiveFromDate', { effectiveFromDate });
+    qb.andWhere('DATE(event.endDate) >= DATE(:effectiveFromDate)', { effectiveFromDate });
 
     if (toDate) {
-      qb.andWhere('event.startDate <= :effectiveEndDate', {
-        effectiveEndDate: new Date(toDate)
+      qb.andWhere('DATE(event.startDate) <= DATE(:effectiveEndDate)', {
+        effectiveEndDate: toDate,
       });
     }
 

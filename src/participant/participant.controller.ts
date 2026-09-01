@@ -28,6 +28,7 @@ import {
 import { Roles } from '../common/decorators/roles.decorator.js';
 import { Public } from '../common/decorators/public.decorator.js';
 import { Throttle } from '@nestjs/throttler';
+import { ApiResponse as ApiResponseDto } from '../common/dto/api-response.dto.js';
 
 @ApiTags('event-participants')
 @Controller()
@@ -75,7 +76,8 @@ export class ParticipantController {
     @Param('eventId') eventId: string,
     @Query() query: ParticipantQueryDto,
   ) {
-    return this.participantService.getParticipantsForEvent(eventId, query);
+    const { data, total } = await this.participantService.getParticipantsForEvent(eventId, query);
+    return ApiResponseDto.paginated(data, total, query.page, query.limit);
   }
 
   @Public()
@@ -87,7 +89,8 @@ export class ParticipantController {
     @Query('email') email: string,
     @Query() query: ParticipantQueryDto,
   ) {
-    return this.participantService.getRegistrationsByEmail(email, query);
+    const { data, total } = await this.participantService.getRegistrationsByEmail(email, query);
+    return ApiResponseDto.paginated(data, total, query.page, query.limit);
   }
 
   @ApiBearerAuth()

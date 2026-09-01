@@ -29,6 +29,7 @@ import { Public } from '../common/decorators/public.decorator.js';
 import { CurrentUser } from '../common/decorators/current-user.decorator.js';
 import { Roles } from '../common/decorators/roles.decorator.js';
 import { Throttle } from '@nestjs/throttler';
+import { ApiResponse as ApiResponseDto } from '../common/dto/api-response.dto.js';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -109,7 +110,8 @@ export class AuthController {
   @ApiOperation({ summary: 'List all users (Admin only)' })
   @SwaggerResponse({ status: 200, description: 'Paginated list of users' })
   async getAllUsers(@Query() query: UserQueryDto) {
-    return this.authService.getAllUsers(query);
+    const { data, total } = await this.authService.getAllUsers(query);
+    return ApiResponseDto.paginated(data, total, query.page, query.limit);
   }
 
   @Patch('users/:id/role')
