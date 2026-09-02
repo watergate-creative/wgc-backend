@@ -140,6 +140,18 @@ export class AuthController {
     return this.authService.deactivateUser(adminId, targetUserId);
   }
 
+  @Patch('users/:id/suspend')
+  @Roles('admin')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Suspend a user account (Admin only)' })
+  @SwaggerResponse({ status: 200, description: 'User suspended' })
+  async suspendUser(
+    @CurrentUser('id') adminId: string,
+    @Param('id', ParseUUIDPipe) targetUserId: string,
+  ) {
+    return this.authService.suspendUser(adminId, targetUserId);
+  }
+
   @Patch('users/:id/activate')
   @Roles('admin')
   @ApiBearerAuth()

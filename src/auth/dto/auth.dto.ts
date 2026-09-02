@@ -8,10 +8,9 @@ import {
   IsEnum,
   IsOptional,
   Matches,
-  IsBoolean,
   Validate,
 } from 'class-validator';
-import { UserRole } from '../entities/user.entity.js';
+import { UserRole, UserStatus } from '../entities/user.entity.js';
 import { PaginationQueryDto } from '../../common/dto/pagination.dto.js';
 import { PasswordDoesNotContainNameConstraint } from '../../common/validators/password-name.validator.js';
 
@@ -108,10 +107,10 @@ export class UserQueryDto extends PaginationQueryDto {
   @IsOptional()
   role?: UserRole;
 
-  @ApiPropertyOptional({ description: 'Filter by active status' })
-  @IsBoolean()
+  @ApiPropertyOptional({ enum: UserStatus, description: 'Filter by status' })
+  @IsEnum(UserStatus)
   @IsOptional()
-  isActive?: boolean;
+  status?: UserStatus;
 }
 
 export class AuthResponseDto {

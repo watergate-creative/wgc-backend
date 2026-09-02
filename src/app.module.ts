@@ -16,6 +16,7 @@ import { FileUploadModule } from './file-upload/file-upload.module.js';
 import { NotificationsModule } from './notifications/notifications.module.js';
 import { FormsModule } from './forms/forms.module.js';
 import { SessionsModule } from './sessions/sessions.module.js';
+import { ActivitiesModule } from './activities/activities.module.js';
 
 // Global modules
 import { MailModule } from './email/mail.module.js';
@@ -96,7 +97,8 @@ import { BullModule } from '@nestjs/bullmq';
     NotificationsModule,
     FormsModule,
     YoutubeModule,
-    SessionsModule
+    SessionsModule,
+    ActivitiesModule
   ],
   controllers: [AppController],
   providers: [

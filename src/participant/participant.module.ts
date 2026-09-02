@@ -5,12 +5,14 @@ import { ParticipantService } from './participant.service.js';
 import { ParticipantController } from './participant.controller.js';
 import { EventsModule } from '../events/events.module.js';
 import { NotificationsModule } from '../notifications/notifications.module.js';
+import { ActivitiesModule } from '../activities/activities.module.js';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Participant]),
     forwardRef(() => EventsModule),
     NotificationsModule,
+    ActivitiesModule,
   ],
   controllers: [ParticipantController],
   providers: [ParticipantService],

@@ -19,6 +19,8 @@ import { EventStatus } from '../events/entities/event.entity.js';
 import { ResilientRedisService } from '../infrastructure/redis/resilient-redis-service.js';
 import { PARTICIPANT_CACHE, EVENT_CACHE } from '../common/redis/cache.constants.js';
 import { createHash } from 'crypto';
+import { ActivitiesService } from '../activities/activities.service.js';
+import { ActivityAction } from '../activities/entities/activity-log.entity.js';
 
 @Injectable()
 export class ParticipantService {
@@ -30,6 +32,7 @@ export class ParticipantService {
     private readonly eventsService: EventsService,
     private readonly notificationService: NotificationService,
     private readonly redis: ResilientRedisService,
+    private readonly activitiesService: ActivitiesService,
   ) {}
 
   // ─── CACHE HELPERS ────────────────────────────────────────────
@@ -135,6 +138,12 @@ export class ParticipantService {
       this.invalidateEventCache(),
     ]);
 
+    await this.activitiesService.logActivity({
+      action: ActivityAction.REGISTER_EVENT,
+      participantId: saved.id,
+      details: `Registered for event ${event.title}`,
+    });
+
     return saved;
   }
 
@@ -190,6 +199,12 @@ export class ParticipantService {
 
     await this.invalidateParticipantCache(eventId);
     
+    await this.activitiesService.logActivity({
+      action: ActivityAction.CHECK_IN_EVENT,
+      participantId: updated.id,
+      details: `Checked in for event ${eventId}`,
+    });
+
     return updated;
   }
 

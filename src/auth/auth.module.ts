@@ -8,6 +8,7 @@ import { AuthService } from './auth.service.js';
 import { AuthController } from './auth.controller.js';
 import { JwtStrategy } from './strategies/jwt.strategy.js';
 import { MailModule } from '../email/mail.module.js';
+import { ActivitiesModule } from '../activities/activities.module.js';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { MailModule } from '../email/mail.module.js';
       }),
     }),
     MailModule,
+    ActivitiesModule,
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy],

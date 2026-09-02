@@ -1,6 +1,7 @@
 import { BaseEntity } from '../../common/entities/base.entities.js';
-import { Column, Entity, ManyToOne, JoinColumn, Unique } from 'typeorm';
+import { Column, Entity, ManyToOne, JoinColumn, Unique, OneToMany } from 'typeorm';
 import { Event } from '../../events/entities/event.entity.js';
+import { ActivityLog } from '../../activities/entities/activity-log.entity.js';
 
 @Entity("Participants")
 @Unique(['eventId', 'email'])
@@ -50,4 +51,7 @@ export class Participant extends BaseEntity {
 
   @Column({ type: 'uuid', nullable: false })
   eventId: string;
+
+  @OneToMany(() => ActivityLog, (activity) => activity.participant)
+  activities: ActivityLog[];
 }

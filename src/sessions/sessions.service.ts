@@ -8,6 +8,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between, LessThan, MoreThan } from 'typeorm';
 import { MinisterProfile } from './entities/minister-profile.entity.js';
+import { UserStatus } from '../auth/entities/user.entity.js';
 import { TimeBlock } from './entities/time-block.entity.js';
 import { Session, SessionStatus } from './entities/session.entity.js';
 import { GoogleCalendarService } from './google-calendar.service.js';
@@ -161,7 +162,7 @@ export class SessionsService {
   async getAllMinisters(): Promise<MinisterProfile[]> {
     return this.profileRepository.find({
       relations: { user: true },
-      where: { user: { isActive: true } },
+      where: { user: { status: UserStatus.ACTIVE } },
       select: {
         id: true,
         title: true,

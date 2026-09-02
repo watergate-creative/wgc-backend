@@ -12,7 +12,7 @@ import { Repository, SelectQueryBuilder } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
-import { User, UserRole } from './entities/user.entity.js';
+import { User, UserRole, UserStatus } from './entities/user.entity.js';
 import {
   RegisterDto,
   LoginDto,
@@ -23,6 +23,8 @@ import {
   AuthResponseDto,
 } from './dto/auth.dto.js';
 import { MailService } from '../email/mail.service.js';
+import { ActivitiesService } from '../activities/activities.service.js';
+import { ActivityAction } from '../activities/entities/activity-log.entity.js';
 
 @Injectable()
 export class AuthService {
@@ -35,6 +37,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly emailService: MailService,
+    private readonly activitiesService: ActivitiesService,
   ) {
     this.jwtRefreshSecret = this.configService.get<string>(
       'JWT_REFRESH_SECRET',
@@ -87,6 +90,12 @@ export class AuthService {
     const tokens = await this.generateTokens(savedUser);
     await this.updateRefreshToken(savedUser.id, tokens.refreshToken);
 
+    await this.activitiesService.logActivity({
+      action: ActivityAction.REGISTER_USER,
+      userId: savedUser.id,
+      details: 'User registered successfully',
+    });
+
     return this.buildAuthResponse(savedUser, tokens);
   }
 
@@ -100,7 +109,7 @@ export class AuthService {
         'firstName':true,
         'lastName':true,
         'role':true,
-        'isActive':true,
+        'status': true,
       },
     });
 
@@ -108,10 +117,11 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    if (!user.isActive) {
-      throw new ForbiddenException(
-        'Account is deactivated. Contact an administrator.',
-      );
+    if (user.status !== UserStatus.ACTIVE) {
+      const reason = user.status === UserStatus.SUSPENDED
+        ? 'Account has been suspended. Contact an administrator.'
+        : 'Account is deactivated. Contact an administrator.';
+      throw new ForbiddenException(reason);
     }
 
     const isPasswordValid = await bcrypt.compare(
@@ -126,6 +136,12 @@ export class AuthService {
 
     const tokens = await this.generateTokens(user);
     await this.updateRefreshToken(user.id, tokens.refreshToken);
+
+    await this.activitiesService.logActivity({
+      action: ActivityAction.LOGIN,
+      userId: user.id,
+      details: 'User logged in',
+    });
 
     return this.buildAuthResponse(user, tokens);
   }
@@ -156,8 +172,8 @@ export class AuthService {
         'firstName':true,
         'lastName':true,
         'role':true,
-        'isActive':true,
-        'refreshToken':true,
+        'status': true,
+        'refreshToken': true,
       },
     });
 
@@ -165,8 +181,11 @@ export class AuthService {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
-    if (!user.isActive) {
-      throw new ForbiddenException('Account is deactivated');
+    if (user.status !== UserStatus.ACTIVE) {
+      const reason = user.status === UserStatus.SUSPENDED
+        ? 'Account has been suspended'
+        : 'Account is deactivated';
+      throw new ForbiddenException(reason);
     }
 
     const isRefreshValid = await bcrypt.compare(
@@ -190,6 +209,12 @@ export class AuthService {
   async logout(userId: string): Promise<void> {
     await this.userRepository.update(userId, { refreshToken: null });
     this.logger.log(`User logged out: ${userId}`);
+
+    await this.activitiesService.logActivity({
+      action: ActivityAction.LOGOUT,
+      userId,
+      details: 'User logged out',
+    });
   }
 
   // ─── USER PROFILE ────────────────────────────────────────────
@@ -232,6 +257,13 @@ export class AuthService {
     });
 
     this.logger.log(`User ${userId} changed their password`);
+
+    await this.activitiesService.logActivity({
+      action: ActivityAction.PASSWORD_CHANGE,
+      userId,
+      details: 'User changed password',
+    });
+
     return { message: 'Password changed successfully. Please login again.' };
   }
 
@@ -253,8 +285,8 @@ export class AuthService {
       qb.andWhere('user.role = :role', { role: query.role });
     }
 
-    if (query.isActive !== undefined) {
-      qb.andWhere('user.isActive = :isActive', { isActive: query.isActive });
+    if (query.status) {
+      qb.andWhere('user.status = :status', { status: query.status });
     }
 
     qb.orderBy('user.createdAt', 'DESC')
@@ -286,6 +318,13 @@ export class AuthService {
     this.logger.log(
       `Admin ${adminId} changed role of user ${targetUserId} to ${dto.role}`,
     );
+
+    await this.activitiesService.logActivity({
+      action: ActivityAction.ROLE_UPDATE,
+      userId: targetUserId,
+      details: `Role changed to ${dto.role} by admin ${adminId}`,
+    });
+
     return updated;
   }
 
@@ -304,11 +343,47 @@ export class AuthService {
       throw new NotFoundException('User not found');
     }
 
-    user.isActive = false;
+    user.status = UserStatus.INACTIVE;
     user.refreshToken = null; // Force logout
     await this.userRepository.save(user);
     this.logger.log(`Admin ${adminId} deactivated user ${targetUserId}`);
+
+    await this.activitiesService.logActivity({
+      action: ActivityAction.STATUS_UPDATE,
+      userId: targetUserId,
+      details: `Account deactivated by admin ${adminId}`,
+    });
+
     return { message: 'User deactivated successfully' };
+  }
+
+  async suspendUser(
+    adminId: string,
+    targetUserId: string,
+  ): Promise<{ message: string }> {
+    if (adminId === targetUserId) {
+      throw new BadRequestException('You cannot suspend your own account');
+    }
+
+    const user = await this.userRepository.findOne({
+      where: { id: targetUserId },
+    });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    user.status = UserStatus.SUSPENDED;
+    user.refreshToken = null; // Force logout
+    await this.userRepository.save(user);
+    this.logger.log(`Admin ${adminId} suspended user ${targetUserId}`);
+
+    await this.activitiesService.logActivity({
+      action: ActivityAction.STATUS_UPDATE,
+      userId: targetUserId,
+      details: `Account suspended by admin ${adminId}`,
+    });
+
+    return { message: 'User suspended successfully' };
   }
 
   async activateUser(
@@ -322,9 +397,16 @@ export class AuthService {
       throw new NotFoundException('User not found');
     }
 
-    user.isActive = true;
+    user.status = UserStatus.ACTIVE;
     await this.userRepository.save(user);
     this.logger.log(`Admin ${adminId} activated user ${targetUserId}`);
+
+    await this.activitiesService.logActivity({
+      action: ActivityAction.STATUS_UPDATE,
+      userId: targetUserId,
+      details: `Account activated by admin ${adminId}`,
+    });
+
     return { message: 'User activated successfully' };
   }
 

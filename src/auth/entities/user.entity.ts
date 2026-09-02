@@ -1,11 +1,18 @@
 import { BaseEntity } from '../../common/entities/base.entities.js';
-import { Column, Entity, OneToOne } from 'typeorm';
+import { Column, Entity, OneToOne, OneToMany } from 'typeorm';
 import { MinisterProfile } from '../../sessions/entities/minister-profile.entity.js';
+import { ActivityLog } from '../../activities/entities/activity-log.entity.js';
 
 export enum UserRole {
   ADMIN = 'admin',
   EDITOR = 'editor',
   USER = 'user',
+}
+
+export enum UserStatus {
+  ACTIVE = 'active',
+  INACTIVE = 'inactive',
+  SUSPENDED = 'suspended',
 }
 
 @Entity('Users')
@@ -29,12 +36,19 @@ export class User extends BaseEntity {
   })
   role: UserRole;
 
-  @Column({ type: 'boolean', default: true })
-  isActive: boolean;
+  @Column({
+    type: 'enum',
+    enum: UserStatus,
+    default: UserStatus.ACTIVE,
+  })
+  status: UserStatus;
 
   @Column({ type: 'varchar', nullable: true, select: false })
   refreshToken: string | null;
 
   @OneToOne(() => MinisterProfile, (profile) => profile.user, { cascade: true })
   ministerProfile: MinisterProfile;
+
+  @OneToMany(() => ActivityLog, (activity) => activity.user)
+  activities: ActivityLog[];
 }
