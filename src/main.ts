@@ -12,20 +12,17 @@ async function bootstrap() {
 
   const logger = new Logger('Bootstrap');
 
-  // Graceful shutdown hooks
   app.enableShutdownHooks();
 
-  // Security
   app.use(helmet());
   app.enableCors({
-    // origin: process.env.ALLOWED_ORIGINS?.split(',') || '*',
+
     origin: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
   });
 
-  // Validation
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -37,10 +34,8 @@ async function bootstrap() {
     }),
   );
 
-  // Global prefix
   app.setGlobalPrefix('api/v1');
 
-  // Swagger documentation
   const config = new DocumentBuilder()
     .setTitle('WaterGate Church API')
     .setDescription(
@@ -67,7 +62,6 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/v1/docs', app, document);
 
-  // Start server
   const port = Number(process.env.PORT) || 3000;
   await app.listen(port);
   logger.log(`🚀 Application running on http://localhost:${port}`);

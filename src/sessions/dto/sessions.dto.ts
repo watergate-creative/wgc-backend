@@ -12,8 +12,6 @@ import {
 } from 'class-validator';
 import * as availability from '../interfaces/availability.interface.js';
 
-// ─── TIME BLOCK DTOs ─────────────────────────────────────────────
-
 export class CreateTimeBlockDto {
   @ApiProperty({ example: '2026-09-01T09:00:00.000Z' })
   @IsDateString()
@@ -30,8 +28,6 @@ export class CreateTimeBlockDto {
   @IsOptional()
   reason?: string;
 }
-
-// ─── SESSION BOOKING DTO ─────────────────────────────────────────
 
 export class BookSessionDto {
   @ApiProperty({ example: 'John Doe' })
@@ -62,8 +58,6 @@ export class BookSessionDto {
   @IsOptional()
   purpose?: string;
 }
-
-// ─── MINISTER PROFILE DTOs ───────────────────────────────────────
 
 export class UpdateWeeklyAvailabilityDto {
   @ApiProperty({

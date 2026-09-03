@@ -8,7 +8,6 @@ import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD, APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
 
-// Feature modules
 import { AuthModule } from './auth/auth.module.js';
 import { EventsModule } from './events/events.module.js';
 import { ParticipantModule } from './participant/participant.module.js';
@@ -18,15 +17,12 @@ import { FormsModule } from './forms/forms.module.js';
 import { SessionsModule } from './sessions/sessions.module.js';
 import { ActivitiesModule } from './activities/activities.module.js';
 
-// Global modules
 import { MailModule } from './email/mail.module.js';
 import { LoggerModule } from './logger/logger.module.js';
 
-// Guards
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard.js';
 import { RolesGuard } from './auth/guards/roles.guard.js';
 
-// Filters & Interceptors
 import { GlobalExceptionFilter } from './common/filters/http-exception.filter.js';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor.js';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor.js';
@@ -36,13 +32,12 @@ import { BullModule } from '@nestjs/bullmq';
 
 @Module({
   imports: [
-    // Configuration
+
     ConfigModule.forRoot({
       isGlobal: true,
     }),
     RedisModule,
 
-    // Cron Jobs Scheduling
     ScheduleModule.forRoot(),
     BullModule.forRootAsync({
       imports: [ConfigModule],
@@ -57,7 +52,6 @@ import { BullModule } from '@nestjs/bullmq';
     }),
     MailModule,
 
-    // Database
     TypeOrmModule.forRoot({
       type: 'postgres',
       host: process.env.POSTGRES_HOST,
@@ -76,7 +70,6 @@ import { BullModule } from '@nestjs/bullmq';
       },
     }),
 
-    // Rate Limiting — 100 requests per minute globally
     ThrottlerModule.forRoot({
       throttlers: [
         {
@@ -86,10 +79,8 @@ import { BullModule } from '@nestjs/bullmq';
       ],
     }),
 
-    // Global modules
     LoggerModule,
 
-    // Feature modules
     AuthModule,
     EventsModule,
     FileUploadModule,
@@ -104,37 +95,31 @@ import { BullModule } from '@nestjs/bullmq';
   providers: [
     AppService,
 
-    // Global JWT Auth Guard (respects @Public() decorator)
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,
     },
 
-    // Global Roles Guard
     {
       provide: APP_GUARD,
       useClass: RolesGuard,
     },
 
-    // Global Rate Limiting Guard
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
     },
 
-    // Global Exception Filter
     {
       provide: APP_FILTER,
       useClass: GlobalExceptionFilter,
     },
 
-    // Global Response Transform Interceptor
     {
       provide: APP_INTERCEPTOR,
       useClass: TransformInterceptor,
     },
 
-    // Global Logging Interceptor
     {
       provide: APP_INTERCEPTOR,
       useClass: LoggingInterceptor,

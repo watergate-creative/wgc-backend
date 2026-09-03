@@ -49,8 +49,6 @@ export class SessionsService {
     private readonly notificationService: NotificationService,
   ) {}
 
-  // ─── MINISTER PROFILE MANAGEMENT ─────────────────────────────────
-
   async createProfile(
     userId: string,
     dto: CreateMinisterProfileDto,
@@ -97,8 +95,6 @@ export class SessionsService {
     await this.profileRepository.save(profile);
   }
 
-  // ─── TIME BLOCKS ────────────────────────────────────────────────
-
   async createTimeBlock(
     userId: string,
     dto: CreateTimeBlockDto,
@@ -112,7 +108,6 @@ export class SessionsService {
       throw new BadRequestException('endTime must be after startTime');
     }
 
-    // Check for overlapping blocks
     const overlapping = await this.timeBlockRepository
       .createQueryBuilder('b')
       .where('b.ministerId = :ministerId', { ministerId: profile.id })
@@ -157,8 +152,6 @@ export class SessionsService {
     await this.timeBlockRepository.remove(block);
   }
 
-  // ─── PUBLIC: LIST MINISTERS ──────────────────────────────────────
-
   async getAllMinisters(): Promise<MinisterProfile[]> {
     return this.profileRepository.find({
       relations: { user: true },
@@ -179,8 +172,6 @@ export class SessionsService {
     });
   }
 
-  // ─── PUBLIC: AVAILABILITY COMPUTATION ───────────────────────────
-
   async getAvailability(
     ministerId: string,
     startDate: string,
@@ -195,7 +186,6 @@ export class SessionsService {
       throw new NotFoundException('Minister profile not found');
     }
 
-    // Explicitly load the refresh token (select: false by default)
     const profileWithToken = await this.profileRepository
       .createQueryBuilder('p')
       .addSelect('p.googleRefreshToken')
@@ -205,7 +195,6 @@ export class SessionsService {
     const start = new Date(startDate);
     const end = new Date(endDate);
 
-    // 1. Collect all busy ranges
     const busyRanges = await this.collectBusyRanges(
       profile.id,
       start,
@@ -214,7 +203,6 @@ export class SessionsService {
       profile.calendarId,
     );
 
-    // 2. Compute available slots from weekly availability
     const availableSlots = AvailabilityEngine.computeAvailableSlots(
       profile.weeklyAvailability,
       profile.sessionDurationMinutes,
@@ -235,12 +223,7 @@ export class SessionsService {
     };
   }
 
-  /**
-   * Collects all busy time ranges from:
-   * 1. Existing booked sessions
-   * 2. Manual time blocks
-   * 3. Google Calendar events (if connected)
-   */
+  
   private async collectBusyRanges(
     ministerId: string,
     start: Date,
@@ -248,7 +231,7 @@ export class SessionsService {
     googleRefreshToken: string | null,
     calendarId: string,
   ): Promise<TimeRange[]> {
-    // Booked sessions
+
     const bookedSessions = await this.sessionRepository.find({
       where: {
         ministerId,
@@ -257,7 +240,6 @@ export class SessionsService {
       },
     });
 
-    // Manual blocks
     const manualBlocks = await this.timeBlockRepository
       .createQueryBuilder('b')
       .where('b.ministerId = :ministerId', { ministerId })
@@ -265,7 +247,6 @@ export class SessionsService {
       .andWhere('b.endTime > :start', { start })
       .getMany();
 
-    // Google Calendar busy slots
     let googleBusySlots: TimeRange[] = [];
     if (googleRefreshToken) {
       googleBusySlots = await this.googleCalendarService.getBusySlots(
@@ -282,10 +263,6 @@ export class SessionsService {
       ...googleBusySlots,
     ];
   }
-
-
-
-  // ─── PUBLIC: BOOK A SESSION ─────────────────────────────────────
 
   async bookSession(
     ministerId: string,
@@ -309,8 +286,6 @@ export class SessionsService {
       throw new BadRequestException('Cannot book a session in the past');
     }
 
-    // ── Double-booking guard ──────────────────────────────────────
-    // Check for overlapping scheduled sessions
     const conflictingSession = await this.sessionRepository
       .createQueryBuilder('s')
       .where('s.ministerId = :ministerId', { ministerId })
@@ -325,7 +300,6 @@ export class SessionsService {
       );
     }
 
-    // Check for overlapping manual blocks
     const conflictingBlock = await this.timeBlockRepository
       .createQueryBuilder('b')
       .where('b.ministerId = :ministerId', { ministerId })
@@ -339,7 +313,6 @@ export class SessionsService {
       );
     }
 
-    // Check Google Calendar conflict
     const profileWithToken = await this.profileRepository
       .createQueryBuilder('p')
       .addSelect('p.googleRefreshToken')
@@ -361,7 +334,6 @@ export class SessionsService {
       }
     }
 
-    // ── Create the session ────────────────────────────────────────
     const session = this.sessionRepository.create({
       guestName: dto.guestName,
       guestEmail: dto.guestEmail,
@@ -374,7 +346,6 @@ export class SessionsService {
 
     const saved = await this.sessionRepository.save(session);
 
-    // Send confirmation via unified notification service
     this.notificationService
       .send({
         type: NotificationType.SESSION_BOOKING_CONFIRMATION,
@@ -411,8 +382,6 @@ export class SessionsService {
     return saved;
   }
 
-  // ─── MINISTER: CANCEL SESSION ───────────────────────────────────
-
   async cancelSession(userId: string, sessionId: string): Promise<Session> {
     const profile = await this.getProfile(userId);
     const session = await this.sessionRepository.findOne({
@@ -430,8 +399,6 @@ export class SessionsService {
     session.status = SessionStatus.CANCELLED;
     return this.sessionRepository.save(session);
   }
-
-  // ─── MINISTER: LIST THEIR SESSIONS ──────────────────────────────
 
   async getMinisterSessions(userId: string): Promise<Session[]> {
     const profile = await this.getProfile(userId);

@@ -17,18 +17,11 @@ import {
   NotificationStatus,
 } from './entities/notification-log.entity.js';
 
-/**
- * Routes notification payloads to the appropriate delivery channels,
- * resolves templates, and persists audit logs.
- *
- * This is the internal engine — domain modules should use the
- * `NotificationService` façade instead.
- */
 @Injectable()
 export class NotificationOrchestrator {
   private readonly logger = new Logger(NotificationOrchestrator.name);
 
-  /** Channel lookup by enum for O(1) resolution */
+  
   private readonly channelMap = new Map<DeliveryChannel, IDeliveryChannel>();
 
   constructor(
@@ -38,7 +31,7 @@ export class NotificationOrchestrator {
     @InjectRepository(NotificationLog)
     private readonly logRepository: Repository<NotificationLog>,
   ) {
-    // Index channels for fast lookup
+
     for (const ch of this.channels) {
       this.channelMap.set(ch.channel, ch);
     }
@@ -47,8 +40,6 @@ export class NotificationOrchestrator {
       `Orchestrator initialised with channels: ${this.channels.map((c) => c.channel).join(', ')}`,
     );
   }
-
-  // ─── DISPATCH (single recipient) ──────────────────────────────
 
   async dispatch(
     type: NotificationType,
@@ -82,19 +73,15 @@ export class NotificationOrchestrator {
         continue;
       }
 
-      // Build the channel-specific payload
       const payload = this.buildChannelPayload(type, recipient, context, channelType);
       const result = await this.safeDispatch(channel, payload);
       results.push(result);
 
-      // Persist audit log
       await this.persistLog(type, channelType, recipient, payload.subject ?? '', result);
     }
 
     return results;
   }
-
-  // ─── PRIVATE HELPERS ──────────────────────────────────────────
 
   private buildChannelPayload(
     type: NotificationType,
@@ -123,10 +110,7 @@ export class NotificationOrchestrator {
     return payload;
   }
 
-  /**
-   * Wraps channel.send() so a single channel failure never
-   * prevents other channels from being attempted.
-   */
+  
   private async safeDispatch(
     channel: IDeliveryChannel,
     payload: ChannelPayload,
@@ -169,7 +153,7 @@ export class NotificationOrchestrator {
 
       await this.logRepository.save(log);
     } catch (error) {
-      // Never let log persistence failures block notification delivery
+
       const msg = error instanceof Error ? error.message : String(error);
       this.logger.error(`Failed to persist notification log: ${msg}`);
     }

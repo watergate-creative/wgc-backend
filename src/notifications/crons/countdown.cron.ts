@@ -10,13 +10,6 @@ import {
   DeliveryChannel,
 } from '../types/notification-types.js';
 
-/**
- * Daily cron that sends countdown reminders to registered participants
- * for events starting within the next 7 days.
- *
- * Refactored to use the unified NotificationService façade instead
- * of directly coupling to MailService + TermiiService.
- */
 @Injectable()
 export class CountdownCronService {
   private readonly logger = new Logger(CountdownCronService.name);
@@ -74,7 +67,6 @@ export class CountdownCronService {
               `Event "${event.title}" is ${daysRemaining} day(s) away. Notifying ${participants.length} participants.`,
             );
 
-            // Dispatch notifications concurrently
             await Promise.allSettled(
               participants.map((participant) =>
                 this.notificationService.send({

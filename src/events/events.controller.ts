@@ -19,7 +19,7 @@ import { ApiResponse as ApiResponseDto } from '../common/dto/api-response.dto.js
 @ApiTags('events')
 @Controller('events')
 export class EventsController {
-  constructor(private readonly eventsService: EventsService) {}
+  constructor(private readonly eventsService: EventsService) { }
 
   @Post()
   @Roles('admin', 'editor')
@@ -45,6 +45,15 @@ export class EventsController {
   @ApiResponse({ status: 200, description: 'List of upcoming events' })
   async findUpcoming(@Query('limit') limit?: number) {
     return this.eventsService.findUpcoming(limit);
+  }
+
+  @Get('grouped')
+  @Public()
+  @ApiOperation({ summary: 'Get up to 10 events per status: upcoming, ongoing, past' })
+  @ApiResponse({ status: 200, description: 'Events grouped by status' })
+  async findGroupedByStatus(@Query('limit') limit?: number) {
+    const data = await this.eventsService.findGroupedByStatus(limit);
+    return ApiResponseDto.ok(data);
   }
 
   @Get('slug/:slug')

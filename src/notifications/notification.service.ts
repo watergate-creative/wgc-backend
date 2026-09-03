@@ -9,26 +9,6 @@ import {
 import { NotificationOrchestrator } from './notification.orchestrator.js';
 import { AudienceResolver } from './audience/audience-resolver.js';
 
-/**
- * Public façade for the notification system.
- *
- * **This is the ONLY class domain modules should import.**
- *
- * It provides two methods:
- * - `send()` — single-recipient, transactional notifications
- * - `broadcast()` — multi-recipient, audience-targeted broadcasts
- *
- * @example
- * ```typescript
- * // In ParticipantService:
- * await this.notificationService.send({
- *   type: NotificationType.EVENT_REGISTRATION_CONFIRMATION,
- *   channels: [DeliveryChannel.EMAIL, DeliveryChannel.SMS],
- *   recipient: { email, phone, name: firstName },
- *   context: { firstName, title, ... },
- * });
- * ```
- */
 @Injectable()
 export class NotificationService {
   private readonly logger = new Logger(NotificationService.name);
@@ -38,12 +18,7 @@ export class NotificationService {
     private readonly audienceResolver: AudienceResolver,
   ) {}
 
-  // ─── SINGLE RECIPIENT ────────────────────────────────────────
-
-  /**
-   * Send a notification to a single recipient.
-   * Used for transactional notifications (registration, booking, etc.).
-   */
+  
   async send<T extends NotificationType>(
     payload: NotificationPayload<T>,
   ): Promise<DeliveryResult[]> {
@@ -61,21 +36,12 @@ export class NotificationService {
     );
   }
 
-  // ─── BROADCAST (AUDIENCE-TARGETED) ───────────────────────────
-
-  /**
-   * Broadcast a notification to a filtered audience.
-   * Used for newsletters, wishes, program announcements.
-   *
-   * Recipients are resolved via `AudienceResolver` and messages
-   * are dispatched concurrently with controlled parallelism.
-   */
+  
   async broadcast<T extends NotificationType>(
     payload: BroadcastPayload<T>,
   ): Promise<{ totalRecipients: number; results: DeliveryResult[] }> {
     const { type, channels, context, audienceFilter } = payload;
 
-    // 1. Resolve audience
     const recipients = await this.audienceResolver.resolve(audienceFilter ?? {});
 
     if (recipients.length === 0) {
@@ -87,7 +53,6 @@ export class NotificationService {
       `Broadcasting ${type} to ${recipients.length} recipients via [${(channels ?? [DeliveryChannel.EMAIL]).join(', ')}]`,
     );
 
-    // 2. Dispatch to each recipient with controlled concurrency
     const BATCH_SIZE = 50;
     const allResults: DeliveryResult[] = [];
 
@@ -96,7 +61,7 @@ export class NotificationService {
 
       const batchResults = await Promise.allSettled(
         batch.map((recipient) => {
-          // Inject recipient name into context for personalisation
+
           const personalizedContext = {
             ...(context as Record<string, unknown>),
             recipientName: recipient.name,

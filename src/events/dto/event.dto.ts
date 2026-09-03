@@ -16,8 +16,6 @@ import { Type } from 'class-transformer';
 import { EventStatus, EventType } from '../entities/event.entity.js';
 import { PaginationQueryDto } from '../../common/dto/pagination.dto.js';
 
-// ─── DAILY SCHEDULE ────────────────────────────────────────────
-
 export enum DayOfWeek {
   MONDAY = 'Monday',
   TUESDAY = 'Tuesday',
@@ -50,8 +48,6 @@ export class DailyScheduleDto {
   @IsNotEmpty()
   time: string;
 }
-
-// ─── CREATE EVENT ──────────────────────────────────────────────
 
 export class CreateEventDto {
   @ApiProperty({ example: 'Partakers of the Holy Ghost' })
@@ -116,8 +112,6 @@ export class CreateEventDto {
   type: EventType;
 }
 
-// ─── UPDATE EVENT ──────────────────────────────────────────────
-
 export class UpdateEventDto {
   @ApiPropertyOptional({ example: 'Partakers of the Holy Ghost 2025' })
   @IsString()
@@ -178,8 +172,6 @@ export class UpdateEventDto {
   @IsOptional()
   type?: EventType;
 }
-
-// ─── QUERY ─────────────────────────────────────────────────────
 
 export class EventQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional({ enum: EventType, description: 'Filter by event type' })

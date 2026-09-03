@@ -1,4 +1,4 @@
-// application/youtube-sync.processor.ts
+
 import { Injectable, Logger, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -21,40 +21,25 @@ export class YoutubeSyncProcessor {
   ) {}
 
   async processPipeline(channelId: string): Promise<void> {
-    this.logger.log(`Starting category-classified pipeline sync for channel: ${channelId}`);
-    
-    // 1. Fetch all videos from channel
+    this.logger.log(`Starting category-classified pipeline sync for channel: ${channelId}`);
     const rawSearchItems = await this.apiClient.fetchAllChannelVideos(channelId);
     if (rawSearchItems.length === 0) {
       this.logger.warn('No videos returned from API.');
       return;
-    }
-
-    // 2. Fetch duration details in chunks
+    }
     const videoIds = rawSearchItems.map(item => item.id.videoId);
     const rawDetailsItems = await this.apiClient.fetchVideoDetails(videoIds);
     const durationMap = new Map<string, string>(
       rawDetailsItems.map(item => [item.id, item.contentDetails?.duration || 'PT0S'])
-    );
-
-    // 3. Principal Optimization: Build inverted Category Map (videoId -> playlistNames[])
-    const categoryMap = await this.buildVideoCategoryMap(channelId);
-
-    // 4. Transform to domain entities with category classification
-    const domainEntities = this.transformToEntities(rawSearchItems, durationMap, categoryMap);
-    
-    // 5. Batch upsert with category updating
-    await this.executeBatchUpsert(domainEntities);
-    
-    // 6. Refresh Redis search indexes and category pools
+    );
+    const categoryMap = await this.buildVideoCategoryMap(channelId);
+    const domainEntities = this.transformToEntities(rawSearchItems, durationMap, categoryMap);
+    await this.executeBatchUpsert(domainEntities);
     await this.refreshCache();
     this.logger.log('Nightly pipeline sync completed successfully.');
   }
 
-  /**
-   * Builds an in-memory lookup map linking videoIds to their parent playlist titles.
-   * Pre-fetching this prevents N+1 HTTP calls during entity transformation.
-   */
+  
   private async buildVideoCategoryMap(channelId: string): Promise<Map<string, string[]>> {
     const map = new Map<string, string[]>();
     
@@ -88,14 +73,10 @@ export class YoutubeSyncProcessor {
     const now = new Date();
 
     for (const item of searchItems) {
-      const vId = item.id?.videoId;
-      // Defensive check: ignore non-video resources (e.g., channels/playlists) returned in search results
+      const vId = item.id?.videoId;
       if (!vId) continue; 
 
-      const assignedCategories = categoryMap.get(vId);
-
-      // By using entityMap.set(vId, ...), if YouTube returns the exact same videoId on page 1 and page 3,
-      // our in-memory map simply overwrites the entry instead of creating a duplicate array item.
+      const assignedCategories = categoryMap.get(vId);
       entityMap.set(vId, {
         videoId: vId,
         title: item.snippet?.title || 'Untitled Video',
@@ -104,8 +85,7 @@ export class YoutubeSyncProcessor {
         duration: durationMap.get(vId) || 'PT0S',
         videoUrl: `https://www.youtube.com/watch?v=${vId}`,
         embedUrl: `https://www.youtube.com/embed/${vId}`,
-        category: assignedCategories && assignedCategories.length > 0 ? assignedCategories : ['General'],
-        // Explicitly pass updatedAt so your BaseEntity tracks modifications during QueryBuilder upserts
+        category: assignedCategories && assignedCategories.length > 0 ? assignedCategories : ['General'],
         updatedAt: now,
       });
     }
@@ -116,9 +96,7 @@ export class YoutubeSyncProcessor {
     return deduplicatedEntities;
   }
 
-  /**
-   * Executes batch upserts into PostgreSQL targeting the unique constraint on `videoId`.
-   */
+  
   private async executeBatchUpsert(entities: Partial<YoutubeVideo>[]): Promise<void> {
     if (entities.length === 0) {
       this.logger.warn('No entities to upsert after deduplication.');
@@ -134,15 +112,9 @@ export class YoutubeSyncProcessor {
         .insert()
         .into(YoutubeVideo)
         .values(batch)
-        .orUpdate(
-          // 1. Columns to update if the videoId already exists in the database.
-          // We include 'updatedAt' so your BaseEntity timestamp stays current!
-          ['title', 'description', 'duration', 'videoUrl', 'embedUrl', 'category', 'updatedAt'], 
-          
-          // 2. Conflict Target: We target the unique index on 'videoId', NOT the UUID 'id'
-          ['videoId'], 
-          
-          // 3. Performance optimization: skip DB write if YouTube metadata hasn't changed
+        .orUpdate(
+          ['title', 'description', 'duration', 'videoUrl', 'embedUrl', 'category', 'updatedAt'], 
+          ['videoId'], 
           { skipUpdateIfNoValuesChanged: true }
         )
         .execute();
@@ -161,9 +133,7 @@ export class YoutubeSyncProcessor {
     });
 
     const cachePayload = { pool, totalRecords };
-    const pipeline = this.redisClient.pipeline();
-
-    // 1. Cache the general paginated pool
+    const pipeline = this.redisClient.pipeline();
     pipeline.set(
       YOUTUBE_CACHE.LATEST_VIDEOS_KEY, 
       JSON.stringify(cachePayload), 

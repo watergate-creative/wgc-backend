@@ -7,12 +7,6 @@ import {
 } from './delivery-channel.interface.js';
 import { MailService } from '../../email/mail.service.js';
 
-/**
- * Email delivery channel.
- *
- * Delegates to the existing `MailService` which enqueues jobs onto
- * BullMQ for async processing by `MailProcessor`.
- */
 @Injectable()
 export class EmailChannel implements IDeliveryChannel {
   readonly channel = DeliveryChannel.EMAIL;
@@ -21,7 +15,7 @@ export class EmailChannel implements IDeliveryChannel {
   constructor(private readonly mailService: MailService) {}
 
   isAvailable(): boolean {
-    // Email infrastructure is always available (Gmail / ZeptoMail)
+
     return true;
   }
 

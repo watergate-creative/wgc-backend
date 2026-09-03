@@ -27,8 +27,6 @@ export class FormsService {
     private readonly notificationService: NotificationService,
   ) {}
 
-  // ─── CREATE (Public submission) ──────────────────────────────
-
   async create(dto: CreateFormEntryDto): Promise<FormEntry> {
     const entry = this.formEntryRepository.create(dto);
     const saved = await this.formEntryRepository.save(entry);
@@ -36,7 +34,6 @@ export class FormsService {
       `Form entry created: type="${saved.type}" from ${saved.email}`,
     );
 
-    // ── Send acknowledgement via unified notification service ──
     this.notificationService
       .send({
         type: NotificationType.FORM_SUBMISSION_ACKNOWLEDGEMENT,
@@ -61,8 +58,6 @@ export class FormsService {
 
     return saved;
   }
-
-  // ─── FIND ALL (Admin, paginated + filtered) ──────────────────
 
   async findAll(
     query: FormEntryQueryDto,
@@ -91,8 +86,6 @@ export class FormsService {
     return { data, total };
   }
 
-  // ─── FIND ONE ────────────────────────────────────────────────
-
   async findOne(id: string): Promise<FormEntry> {
     const entry = await this.formEntryRepository.findOne({
       where: { id },
@@ -103,8 +96,6 @@ export class FormsService {
     return entry;
   }
 
-  // ─── UPDATE (Admin) ──────────────────────────────────────────
-
   async update(id: string, dto: UpdateFormEntryDto): Promise<FormEntry> {
     const entry = await this.findOne(id);
     Object.assign(entry, dto);
@@ -112,8 +103,6 @@ export class FormsService {
     this.logger.log(`Form entry updated: ${id}`);
     return updated;
   }
-
-  // ─── DELETE (Admin, soft-delete) ─────────────────────────────
 
   async remove(id: string): Promise<void> {
     const entry = await this.findOne(id);

@@ -11,7 +11,6 @@ export class PasswordDoesNotContainNameConstraint
   validate(password: string, args: ValidationArguments) {
     if (!password) return false;
 
-    // We can get the entire object being validated from args.object
     const object = args.object as any;
 
     if (object.firstName) {

@@ -29,10 +29,7 @@ export class TermiiService {
     }
   }
 
-  /**
-   * Returns `true` when the Termii API key is configured and SMS can be sent.
-   * Used by `SmsChannel` to determine channel availability.
-   */
+  
   isConfigured(): boolean {
     return !!this.apiKey;
   }
@@ -43,8 +40,6 @@ export class TermiiService {
       return;
     }
 
-    // Format phone number according to Termii requirements (must include country code, e.g., 234)
-    // Here we'll do a very basic standardization assuming it's mostly Nigerian numbers.
     let formattedPhone = payload.to.replace(/\D/g, ''); // Remove non-digits
     if (formattedPhone.startsWith('0')) {
       formattedPhone = '234' + formattedPhone.substring(1);

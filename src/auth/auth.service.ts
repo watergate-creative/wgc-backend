@@ -45,8 +45,6 @@ export class AuthService {
     );
   }
 
-  // ─── PUBLIC AUTH ──────────────────────────────────────────────
-
   async register(registerDto: RegisterDto): Promise<AuthResponseDto> {
     const email = registerDto.email.toLowerCase().trim();
 
@@ -146,11 +144,7 @@ export class AuthService {
     return this.buildAuthResponse(user, tokens);
   }
 
-  /**
-   * FIXED: No longer scans all users. 
-   * Decodes the refresh JWT to extract userId, fetches only that user,
-   * then bcrypt-compares the stored hashed refresh token.
-   */
+  
   async refreshTokens(
     refreshTokenDto: RefreshTokenDto,
   ): Promise<AuthResponseDto> {
@@ -193,7 +187,7 @@ export class AuthService {
       user.refreshToken,
     );
     if (!isRefreshValid) {
-      // Possible token reuse attack — invalidate all sessions
+
       await this.userRepository.update(user.id, { refreshToken: null });
       throw new UnauthorizedException(
         'Refresh token has been revoked. Please login again.',
@@ -216,8 +210,6 @@ export class AuthService {
       details: 'User logged out',
     });
   }
-
-  // ─── USER PROFILE ────────────────────────────────────────────
 
   async getProfile(
     userId: string,
@@ -266,8 +258,6 @@ export class AuthService {
 
     return { message: 'Password changed successfully. Please login again.' };
   }
-
-  // ─── ADMIN: USER MANAGEMENT ──────────────────────────────────
 
   async getAllUsers(
     query: UserQueryDto,
@@ -409,8 +399,6 @@ export class AuthService {
 
     return { message: 'User activated successfully' };
   }
-
-  // ─── PRIVATE HELPERS ─────────────────────────────────────────
 
   private async generateTokens(
     user: User,

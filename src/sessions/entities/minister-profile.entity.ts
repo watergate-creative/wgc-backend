@@ -14,7 +14,7 @@ export class MinisterProfile extends BaseEntity {
   @JoinColumn({ name: 'userId' })
   user: User;
 
-  /** Public-facing title, e.g. "Serving Overseer", "Senior Pastor" */
+  
   @Column({ type: 'varchar', length: 200, nullable: false })
   title: string;
 
@@ -24,18 +24,11 @@ export class MinisterProfile extends BaseEntity {
   @Column({ type: 'varchar', default: 'primary' })
   calendarId: string;
 
-  /** Duration of a single bookable session slot in minutes */
+  
   @Column({ type: 'int', default: 60 })
   sessionDurationMinutes: number;
 
-  /**
-   * TypeORM automatically parses jsonb columns into JS objects.
-   * Example:
-   * {
-   *   "Monday":    [{ start: "09:00", end: "17:00" }],
-   *   "Wednesday": [{ start: "10:00", end: "16:00" }]
-   * }
-   */
+  
   @Column({ type: 'jsonb', nullable: true })
   weeklyAvailability: WeeklyAvailability | null;
 

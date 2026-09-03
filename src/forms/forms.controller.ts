@@ -31,8 +31,6 @@ import { ApiResponse as ApiResponseDto } from '../common/dto/api-response.dto.js
 export class FormsController {
   constructor(private readonly formsService: FormsService) {}
 
-  // ─── PUBLIC: Submit a form entry ─────────────────────────────
-
   @Post()
   @Public()
   @Throttle({ default: { limit: 10, ttl: 60000 } })
@@ -41,8 +39,6 @@ export class FormsController {
   async create(@Body() dto: CreateFormEntryDto) {
     return this.formsService.create(dto);
   }
-
-  // ─── ADMIN: List all form entries (paginated + filtered) ─────
 
   @Get()
   @Roles('admin')
@@ -54,8 +50,6 @@ export class FormsController {
     return ApiResponseDto.paginated(data, total, query.page, query.limit);
   }
 
-  // ─── ADMIN: Get a single form entry ──────────────────────────
-
   @Get(':id')
   @Roles('admin')
   @ApiBearerAuth()
@@ -65,8 +59,6 @@ export class FormsController {
   async findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.formsService.findOne(id);
   }
-
-  // ─── ADMIN: Update a form entry ──────────────────────────────
 
   @Patch(':id')
   @Roles('admin')
@@ -79,8 +71,6 @@ export class FormsController {
   ) {
     return this.formsService.update(id, dto);
   }
-
-  // ─── ADMIN: Delete a form entry ──────────────────────────────
 
   @Delete(':id')
   @Roles('admin')

@@ -16,16 +16,11 @@ import {
 import { SendNewsletterDto } from '../dto/send-newsletter.dto.js';
 import { ProgramAnnouncementDto } from '../dto/program-announcement.dto.js';
 
-/**
- * Admin-only endpoints for sending newsletters and program announcements.
- */
 @Controller('admin/notifications')
 export class NotificationController {
   private readonly logger = new Logger(NotificationController.name);
 
   constructor(private readonly notificationService: NotificationService) {}
-
-  // ─── NEWSLETTER ───────────────────────────────────────────────
 
   @Post('newsletter')
   @Roles(UserRole.ADMIN)
@@ -54,8 +49,6 @@ export class NotificationController {
       totalRecipients: result.totalRecipients,
     };
   }
-
-  // ─── PROGRAM ANNOUNCEMENT ────────────────────────────────────
 
   @Post('program-announcement')
   @Roles(UserRole.ADMIN)

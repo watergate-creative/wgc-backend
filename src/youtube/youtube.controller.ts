@@ -1,4 +1,4 @@
-// application/youtube.controller.ts
+
 import { Controller, Get, Post, Query, HttpCode, HttpStatus, Logger } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
@@ -41,9 +41,7 @@ export class YoutubeController {
   })
   @ApiResponse({ status: 202, description: 'Pipeline sync triggered successfully.' })
   async triggerManualSync(): Promise<{ message: string }> {
-    const channelId = this.configService.getOrThrow<string>('YOUTUBE_CHANNEL_ID');
-    
-    // Execute asynchronously so the HTTP request doesn't hang until ingestion completes
+    const channelId = this.configService.getOrThrow<string>('YOUTUBE_CHANNEL_ID');
     this.syncProcessor.processPipeline(channelId).catch((err) => {
       this.logger.error('Manual pipeline sync failed during background execution', err.stack);
     });

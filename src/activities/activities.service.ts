@@ -4,7 +4,6 @@ import { Repository } from 'typeorm';
 import { ActivityLog, ActivityAction } from './entities/activity-log.entity.js';
 import { ActivityQueryDto, ActivityResponseItem, LogActivityParams } from './dto/activities.dto.js';
 
-
 @Injectable()
 export class ActivitiesService {
   private readonly logger = new Logger(ActivitiesService.name);
@@ -19,7 +18,7 @@ export class ActivitiesService {
       const activity = this.activityRepository.create(params);
       await this.activityRepository.save(activity);
     } catch (error) {
-      // Activity logging must never break the main request flow
+
       this.logger.error(`Failed to log activity: ${error.message}`, error.stack);
     }
   }

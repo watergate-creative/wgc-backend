@@ -11,10 +11,6 @@ export enum NotificationStatus {
   FAILED = 'failed',
 }
 
-/**
- * Audit trail for every notification dispatched by the system.
- * Enables admin dashboards, delivery reporting, and debugging.
- */
 @Entity('NotificationLogs')
 export class NotificationLog extends BaseEntity {
   @Column({ type: 'varchar', length: 100 })

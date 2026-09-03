@@ -1,4 +1,4 @@
-// infrastructure/youtube-api.client.ts
+
 import { Injectable, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
@@ -60,10 +60,7 @@ export class YoutubeApiClient {
     return allItems;
   }
 
-  /**
-   * Fetches all playlists created by the channel.
-   * Cost: 1 Quota Unit per page.
-   */
+  
   async fetchChannelPlaylists(channelId: string): Promise<PlaylistSummary[]> {
     const playlists: PlaylistSummary[] = [];
     let nextPageToken: string | undefined = undefined;
@@ -97,10 +94,7 @@ export class YoutubeApiClient {
     return playlists;
   }
 
-  /**
-   * Fetches all video IDs inside a specific playlist.
-   * Cost: 1 Quota Unit per page.
-   */
+  
   async fetchPlaylistItems(playlistId: string): Promise<string[]> {
     const videoIds: string[] = [];
     let nextPageToken: string | undefined = undefined;

@@ -32,8 +32,6 @@ export class SessionsController {
     private readonly googleCalendarService: GoogleCalendarService,
   ) {}
 
-  // ─── GOOGLE OAUTH FOR MINISTERS ─────────────────────────────────
-
   @Get('auth/google')
   @Roles('admin', 'editor')
   @ApiBearerAuth()
@@ -63,8 +61,6 @@ export class SessionsController {
       res.status(400).send(`Error linking Google Calendar: ${(error as Error).message}`);
     }
   }
-
-  // ─── MINISTER PROFILE ──────────────────────────────────────────
 
   @Post('profile')
   @Roles('admin', 'editor')
@@ -101,8 +97,6 @@ export class SessionsController {
     );
   }
 
-  // ─── TIME BLOCKS ────────────────────────────────────────────────
-
   @Post('blocks')
   @Roles('admin', 'editor')
   @ApiBearerAuth()
@@ -136,8 +130,6 @@ export class SessionsController {
     return { message: 'Time block removed successfully' };
   }
 
-  // ─── MINISTER SESSIONS ─────────────────────────────────────────
-
   @Get('my-sessions')
   @Roles('admin', 'editor')
   @ApiBearerAuth()
@@ -159,8 +151,6 @@ export class SessionsController {
   ) {
     return this.sessionsService.cancelSession(req.user.id, sessionId);
   }
-
-  // ─── PUBLIC BOOKING ENDPOINTS ───────────────────────────────────
 
   @Get('ministers')
   @Public()

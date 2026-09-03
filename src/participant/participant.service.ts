@@ -35,8 +35,6 @@ export class ParticipantService {
     private readonly activitiesService: ActivitiesService,
   ) {}
 
-  // ─── CACHE HELPERS ────────────────────────────────────────────
-
   private hashQuery(params: Record<string, unknown>): string {
     const sorted = Object.keys(params)
       .sort()
@@ -53,22 +51,20 @@ export class ParticipantService {
       .slice(0, 16);
   }
 
-  /** Invalidate participant caches scoped to a specific event. */
+  
   private async invalidateParticipantCache(eventId: string): Promise<void> {
     await this.redis.deleteByPrefix(`${PARTICIPANT_CACHE.LIST_PREFIX}${eventId}`);
   }
 
-  /** Invalidate all email-lookup caches. */
+  
   private async invalidateLookupCache(): Promise<void> {
     await this.redis.deleteByPrefix(PARTICIPANT_CACHE.LOOKUP_PREFIX);
   }
 
-  /** Invalidate event caches (registration count changed). */
+  
   private async invalidateEventCache(): Promise<void> {
     await this.redis.deleteByPrefix(EVENT_CACHE.NAMESPACE);
   }
-
-  // ─── COMMANDS ─────────────────────────────────────────────────
 
   async register(
     eventId: string,
@@ -82,7 +78,6 @@ export class ParticipantService {
 
     const email = dto.email.toLowerCase();
 
-    // Prevent duplicate registration for the *same* event
     const existing = await this.participantRepository.findOne({
       where: { eventId, email },
     });
@@ -100,7 +95,6 @@ export class ParticipantService {
     const saved = await this.participantRepository.save(participant);
     await this.eventsService.incrementRegistrationCount(eventId);
 
-    // ── Send registration confirmation via unified notification service ──
     this.notificationService
       .send({
         type: NotificationType.EVENT_REGISTRATION_CONFIRMATION,
@@ -131,7 +125,6 @@ export class ParticipantService {
 
     this.logger.log(`New participant registration for event "${event.title}": ${email}`);
 
-    // Invalidate participant + event caches (registration count changed)
     await Promise.all([
       this.invalidateParticipantCache(eventId),
       this.invalidateLookupCache(),
@@ -146,37 +139,6 @@ export class ParticipantService {
 
     return saved;
   }
-
-  // async registerBulk(dto: BulkRegistrationDto): Promise<{
-  //   successful: { eventId: string; participantId: string }[];
-  //   failed: { eventId: string; reason: string }[];
-  // }> {
-  //   const successful: { eventId: string; participantId: string }[] = [];
-  //   const failed: { eventId: string; reason: string }[] = [];
-
-  //   for (const eventId of dto.eventIds) {
-  //     try {
-  //       const participant = await this.register(eventId, {
-  //         firstName: dto.firstName,
-  //         lastName: dto.lastName,
-  //         email: dto.email,
-  //         phone: dto.phone,
-  //         gender: dto.gender,
-  //         address: dto.address,
-  //         placeOfWorship: dto.placeOfWorship,
-  //         selectedDays: dto.se
-  //       });
-  //       successful.push({ eventId, participantId: participant.id });
-  //     } catch (error) {
-  //       failed.push({
-  //         eventId,
-  //         reason: error instanceof Error ? error.message : 'Unknown error',
-  //       });
-  //     }
-  //   }
-
-  //   return { successful, failed };
-  // }
 
   async checkIn(eventId: string, participantId: string): Promise<Participant> {
     const participant = await this.participantRepository.findOne({
@@ -207,8 +169,6 @@ export class ParticipantService {
 
     return updated;
   }
-
-  // ─── QUERIES ──────────────────────────────────────────────────
 
   async getParticipantsForEvent(
     eventId: string,
@@ -296,7 +256,6 @@ export class ParticipantService {
     await this.eventsService.decrementRegistrationCount(eventId);
     this.logger.log(`Participant registration removed: ${participantId}`);
 
-    // Invalidate participant + event caches (registration count changed)
     await Promise.all([
       this.invalidateParticipantCache(eventId),
       this.invalidateLookupCache(),

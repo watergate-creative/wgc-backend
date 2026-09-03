@@ -8,10 +8,6 @@ export interface SendEmailJobPayload {
   context: Record<string, any>;
 }
 
-/**
- * Supported mail providers.
- * Set via the MAIL_PROVIDER env var (defaults to 'gmail').
- */
 export enum MailProvider {
   GMAIL = 'gmail',
   ZEPTOMAIL = 'zeptomail',

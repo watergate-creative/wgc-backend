@@ -20,8 +20,7 @@ import { ResilientRedisService } from '../../infrastructure/redis/resilient-redi
           port,
           password,
           maxRetriesPerRequest: 1, 
-          retryStrategy: (times) => {
-            // Cap retry attempts or keep your exponential backoff
+          retryStrategy: (times) => {
             const delay = Math.min(times * 50, 2000);
             return delay;
           },

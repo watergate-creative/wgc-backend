@@ -36,8 +36,6 @@ import { ApiResponse as ApiResponseDto } from '../common/dto/api-response.dto.js
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  // ─── PUBLIC AUTH ──────────────────────────────────────────────
-
   @Public()
   @Post('register')
   @Throttle({ default: { limit: 5, ttl: 60000 } })
@@ -80,8 +78,6 @@ export class AuthController {
     return { message: 'Logged out successfully' };
   }
 
-  // ─── USER PROFILE ────────────────────────────────────────────
-
   @Get('profile')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get current user profile' })
@@ -101,8 +97,6 @@ export class AuthController {
   ) {
     return this.authService.changePassword(userId, dto);
   }
-
-  // ─── ADMIN: USER MANAGEMENT ──────────────────────────────────
 
   @Get('users')
   @Roles('admin')

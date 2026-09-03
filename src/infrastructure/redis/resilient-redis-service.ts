@@ -1,4 +1,4 @@
-// infrastructure/redis/resilient-redis.service.ts
+
 import { Injectable, Logger, Inject, OnModuleDestroy } from '@nestjs/common';
 import Redis, { ChainableCommander, Pipeline } from 'ioredis';
 import { REDIS_CLIENT } from '../../common/redis/redis.constants';
@@ -15,19 +15,14 @@ export class ResilientRedisService implements OnModuleDestroy {
   
   private state: CircuitState = CircuitState.CLOSED;
   private failureCount = 0;
-  private lastStateChange = Date.now();
-
-  // Circuit Breaker Configuration
+  private lastStateChange = Date.now();
   private readonly FAILURE_THRESHOLD = 3;       // Trip after 3 consecutive failures
   private readonly COOLDOWN_PERIOD_MS = 30000;  // Stay OPEN for 30 seconds before retry
   private readonly OPERATION_TIMEOUT_MS = 1500; // Abort slow Redis calls after 1.5s
 
   constructor(@Inject(REDIS_CLIENT) private readonly redis: Redis) {}
 
-  /**
-   * Safely retrieves a key. Returns null if circuit is OPEN or Redis fails,
-   * triggering an instant, silent fallback to PostgreSQL.
-   */
+  
   async get(key: string): Promise<string | null> {
     if (!this.canExecute()) return null;
 
@@ -41,9 +36,7 @@ export class ResilientRedisService implements OnModuleDestroy {
     }
   }
 
-  /**
-   * Safely sets a key. Fails silently if Redis is unreachable.
-   */
+  
   async set(key: string, value: string, mode?: 'EX', ttlSeconds?: number): Promise<boolean> {
     if (!this.canExecute()) return false;
 
@@ -61,9 +54,7 @@ export class ResilientRedisService implements OnModuleDestroy {
     }
   }
 
-  /**
-   * Safely deletes a key.
-   */
+  
   async del(key: string): Promise<void> {
     if (!this.canExecute()) return;
 
@@ -75,10 +66,7 @@ export class ResilientRedisService implements OnModuleDestroy {
     }
   }
 
-  /**
-   * Safely deletes all keys matching a given prefix using SCAN (non-blocking).
-   * Avoids the O(N) blocking KEYS command — safe for production workloads.
-   */
+  
   async deleteByPrefix(prefix: string): Promise<void> {
     if (!this.canExecute()) return;
 
@@ -99,16 +87,13 @@ export class ResilientRedisService implements OnModuleDestroy {
     }
   }
 
-  /**
-   * Safely executes a batch pipeline. Returns false if Redis is down.
-   */
+  
   async execPipeline(callback: (pipeline: ChainableCommander) => void): Promise<boolean> {
     if (!this.canExecute()) return false;
 
     try {
       const pipeline = this.redis.pipeline();
-      callback(pipeline);
-      // pipeline.exec() returns a Promise<[error, result][]>
+      callback(pipeline);
       await this.executeWithTimeout(pipeline.exec());
       this.onSuccess();
       return true;

@@ -7,13 +7,6 @@ import {
   DeliveryResult,
 } from './delivery-channel.interface.js';
 
-/**
- * Google RCS delivery channel — **stub implementation**.
- *
- * Logs messages when the API key is not configured.
- * When `GOOGLE_RCS_API_KEY` is set, this class will be extended
- * with the actual Google RCS / Business Messages API integration.
- */
 @Injectable()
 export class RcsChannel implements IDeliveryChannel {
   readonly channel = DeliveryChannel.RCS;
@@ -45,8 +38,6 @@ export class RcsChannel implements IDeliveryChannel {
       };
     }
 
-    // ── Stub: log only ──────────────────────────────────────────
-    // TODO: Replace with actual Google RCS API call when credentials are available
     this.logger.log(
       `[RCS STUB] Would send to ${recipient.phone}: ${smsBody ?? '(no body)'}`,
     );

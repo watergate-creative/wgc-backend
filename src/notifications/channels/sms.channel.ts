@@ -10,11 +10,6 @@ import {
 import { TermiiService } from '../termii.service.js';
 import { SMS_QUEUE, SEND_SMS_JOB, SendSmsJobPayload } from '../sms.constants.js';
 
-/**
- * SMS delivery channel.
- *
- * Enqueues SMS jobs to BullMQ. Gracefully degrades when the Termii API key is not configured.
- */
 @Injectable()
 export class SmsChannel implements IDeliveryChannel {
   readonly channel = DeliveryChannel.SMS;
@@ -26,8 +21,7 @@ export class SmsChannel implements IDeliveryChannel {
   ) {}
 
   isAvailable(): boolean {
-    // TermiiService already handles missing API key gracefully,
-    // but we surface it here so the orchestrator can skip SMS entirely.
+
     return this.termiiService.isConfigured();
   }
 

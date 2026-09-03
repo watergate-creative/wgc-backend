@@ -7,8 +7,7 @@ import { MAIL_QUEUE } from './mail.constants';
 import { MailQueueController } from './mail.controller';
 
 @Module({
-  imports: [
-    // Register the specific queue for emails
+  imports: [
     BullModule.registerQueue({
       name: MAIL_QUEUE,
     }),

@@ -7,9 +7,6 @@ import {
   MaxLength,
 } from 'class-validator';
 
-/**
- * DTO for announcing an upcoming program via the admin endpoint.
- */
 export class ProgramAnnouncementDto {
   @IsString()
   @IsNotEmpty()
@@ -38,8 +35,6 @@ export class ProgramAnnouncementDto {
   @IsOptional()
   @MaxLength(1000)
   actionUrl?: string;
-
-  // ── Audience filter ──
 
   @IsUUID()
   @IsOptional()

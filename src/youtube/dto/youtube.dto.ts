@@ -1,4 +1,4 @@
-// application/dto/youtube.dto.ts
+
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsOptional, IsString } from 'class-validator';
 import { PaginationQueryDto } from '../../common'; // Adjust path as needed

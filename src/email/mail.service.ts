@@ -13,12 +13,10 @@ export class MailService {
     @InjectQueue(MAIL_QUEUE) private readonly mailQueue: Queue,
   ) {}
 
-  /**
-   * Pushes an email to the background queue for asynchronous processing.
-   */
+  
   async queueEmail(payload: SendEmailJobPayload): Promise<void> {
     try {
-      // Add job to queue with retry logic
+
       await this.mailQueue.add(SEND_EMAIL_JOB, payload, {
         attempts: 3,
         backoff: {
@@ -26,7 +24,7 @@ export class MailService {
           delay: 2000,
         },
         removeOnComplete: true,
-        // Retain failed jobs for up to 7 days or a max of 1000 jobs so you can retry them later
+
         removeOnFail: {
           age: 7 * 24 * 3600, // 7 days in seconds
           count: 1000,

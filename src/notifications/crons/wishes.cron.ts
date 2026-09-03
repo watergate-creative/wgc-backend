@@ -6,24 +6,13 @@ import {
   DeliveryChannel,
 } from '../types/notification-types.js';
 
-/**
- * Cron-based scheduler for automated weekly and monthly wishes.
- *
- * Uses predefined templates with dynamic date interpolation.
- * Admins can also send custom wishes via the newsletter endpoint.
- */
 @Injectable()
 export class WishesCronService {
   private readonly logger = new Logger(WishesCronService.name);
 
   constructor(private readonly notificationService: NotificationService) {}
 
-  // ─── NEW WEEK WISHES ──────────────────────────────────────────
-
-  /**
-   * Runs every Monday at 7:00 AM — sends "Happy New Week" to all
-   * participants with contact consent.
-   */
+  
   @Cron('0 7 * * 1')
   async sendNewWeekWishes(): Promise<void> {
     this.logger.log('Running new week wishes cron...');
@@ -53,12 +42,7 @@ export class WishesCronService {
     }
   }
 
-  // ─── NEW MONTH WISHES ─────────────────────────────────────────
-
-  /**
-   * Runs on the 1st of every month at 7:00 AM — sends "Happy New Month"
-   * to all participants with contact consent.
-   */
+  
   @Cron('0 7 1 * *')
   async sendNewMonthWishes(): Promise<void> {
     this.logger.log('Running new month wishes cron...');

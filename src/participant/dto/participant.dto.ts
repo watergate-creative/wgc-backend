@@ -50,7 +50,7 @@ export class RegisterParticipantDto {
 
   @ApiPropertyOptional({ type: Boolean })
   @Transform(({ value }) => {
-    // Converts "true" (string) or true (boolean) to true. Everything else (including "") becomes false.
+
     if (value === 'true' || value === true) return true;
     return false;
   })

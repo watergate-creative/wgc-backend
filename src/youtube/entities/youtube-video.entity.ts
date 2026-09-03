@@ -14,9 +14,7 @@ export class YoutubeVideo extends BaseEntity{
   description: string;
 
   @Column()
-  publishedAt: Date;
-
-  // New Columns
+  publishedAt: Date;
   @Column()
   duration: string; // Stores YouTube's ISO 8601 duration format (e.g., PT15M33S)
 

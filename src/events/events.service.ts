@@ -1,6 +1,7 @@
 import {
   Injectable,
   NotFoundException,
+  BadRequestException,
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -21,13 +22,6 @@ export class EventsService {
     private readonly redis: ResilientRedisService,
   ) { }
 
-  // ─── CACHE HELPERS ────────────────────────────────────────────
-
-  /**
-   * Produces a short, deterministic hash from query parameters
-   * to use as a cache key suffix. Sorted keys ensure identical
-   * queries always map to the same cache entry.
-   */
   private hashQuery(params: Record<string, unknown>): string {
     const sorted = Object.keys(params)
       .sort()
@@ -44,14 +38,21 @@ export class EventsService {
       .slice(0, 16);
   }
 
-  /** Invalidate every cached key under the events namespace. */
   private async invalidateEventCache(): Promise<void> {
     await this.redis.deleteByPrefix(EVENT_CACHE.NAMESPACE);
   }
 
-  // ─── QUERIES ──────────────────────────────────────────────────
+  private assertDateOrder(startDate: string | Date, endDate: string | Date): void {
+    if (new Date(startDate) >= new Date(endDate)) {
+      throw new BadRequestException(
+        'Start date must be earlier than end date',
+      );
+    }
+  }
 
   async create(dto: CreateEventDto): Promise<Event> {
+    this.assertDateOrder(dto.startDate, dto.endDate);
+
     const slug = this.generateSlug(dto.title);
 
     const event = this.eventRepository.create({
@@ -61,7 +62,6 @@ export class EventsService {
       endDate: new Date(dto.endDate),
       dailySchedule: dto.dailySchedule ? JSON.stringify(dto.dailySchedule) : "",
     });
-
 
     const saved = await this.eventRepository.save(event);
     this.logger.log(`Event created: "${saved.title}" (${saved.slug})`);
@@ -105,10 +105,8 @@ export class EventsService {
       return JSON.parse(cached);
     }
 
-    const query = this.eventRepository.createQueryBuilder('event');
-
-    const data = await query
-      // Ensure this is called directly on the instance
+    const data = await this.eventRepository
+      .createQueryBuilder('event')
       .loadRelationIdAndMap('event.participantCount', 'event.participants')
       .where('event.status = :status', { status: EventStatus.PUBLISHED })
       .andWhere('event.endDate >= :now', { now: new Date() })
@@ -119,6 +117,48 @@ export class EventsService {
     await this.redis.set(cacheKey, JSON.stringify(data), 'EX', EVENT_CACHE.TTL_SEC);
 
     return data;
+  }
+
+  async findGroupedByStatus(limit = 10): Promise<{
+    upcoming: Event[];
+    ongoing: Event[];
+    past: Event[];
+  }> {
+    const cacheKey = `events:grouped:${limit}`;
+
+    const cached = await this.redis.get(cacheKey);
+    if (cached) {
+      return JSON.parse(cached);
+    }
+
+    const [upcoming, ongoing, past] = await Promise.all([
+      this.eventRepository
+        .createQueryBuilder('event')
+        .where('event.status = :status', { status: EventStatus.PUBLISHED })
+        .orderBy('event.startDate', 'ASC')
+        .take(limit)
+        .getMany(),
+
+      this.eventRepository
+        .createQueryBuilder('event')
+        .where('event.status = :status', { status: EventStatus.ONGOING })
+        .orderBy('event.startDate', 'ASC')
+        .take(limit)
+        .getMany(),
+
+      this.eventRepository
+        .createQueryBuilder('event')
+        .where('event.status = :status', { status: EventStatus.COMPLETED })
+        .orderBy('event.endDate', 'DESC')
+        .take(limit)
+        .getMany(),
+    ]);
+
+    const result = { upcoming, ongoing, past };
+
+    await this.redis.set(cacheKey, JSON.stringify(result), 'EX', EVENT_CACHE.TTL_SEC);
+
+    return result;
   }
 
   async findBySlug(slug: string): Promise<Event> {
@@ -177,6 +217,9 @@ export class EventsService {
       (dto as any).endDate = new Date(dto.endDate);
     }
 
+    const effectiveStart = dto.startDate ? new Date(dto.startDate) : event.startDate;
+    const effectiveEnd = dto.endDate ? new Date(dto.endDate) : event.endDate;
+    this.assertDateOrder(effectiveStart, effectiveEnd);
 
     if (dto.dailySchedule !== undefined) {
       (dto as any).dailySchedule = JSON.stringify(dto.dailySchedule);
@@ -209,12 +252,7 @@ export class EventsService {
     await this.invalidateEventCache();
   }
 
-  // ─── EVENT LIFECYCLE TRANSITIONS ───────────────────────────────
 
-  /**
-   * Transitions published events whose startDate has arrived to ongoing.
-   * Called by the EventLifecycleCronService every minute.
-   */
   async markOngoingEvents(): Promise<number> {
     const now = new Date();
 
@@ -237,10 +275,7 @@ export class EventsService {
     return affected;
   }
 
-  /**
-   * Marks all ongoing or published events whose endDate has elapsed as completed.
-   * Called by the EventLifecycleCronService every minute.
-   */
+
   async markExpiredEventsAsCompleted(): Promise<number> {
     const result = await this.eventRepository.update(
       {
@@ -260,19 +295,15 @@ export class EventsService {
     return affected;
   }
 
-  // ─── PRIVATE HELPERS ──────────────────────────────────────────
-
   private applyFilters(qb: SelectQueryBuilder<Event>, query: EventQueryDto): void {
-
     const { type, status, search, fromDate, toDate } = query;
-    const effectiveFromDate = fromDate ?? new Date().toISOString().slice(0, 10);
 
-    qb.andWhere('DATE(event.endDate) >= DATE(:effectiveFromDate)', { effectiveFromDate });
+    if (fromDate) {
+      qb.andWhere('DATE(event.endDate) >= DATE(:fromDate)', { fromDate });
+    }
 
     if (toDate) {
-      qb.andWhere('DATE(event.startDate) <= DATE(:effectiveEndDate)', {
-        effectiveEndDate: toDate,
-      });
+      qb.andWhere('DATE(event.startDate) <= DATE(:toDate)', { toDate });
     }
 
     if (type) {

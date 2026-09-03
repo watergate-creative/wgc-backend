@@ -7,9 +7,6 @@ import {
   MaxLength,
 } from 'class-validator';
 
-/**
- * DTO for sending a newsletter broadcast via the admin endpoint.
- */
 export class SendNewsletterDto {
   @IsString()
   @IsNotEmpty()
@@ -24,8 +21,6 @@ export class SendNewsletterDto {
   @IsOptional()
   @MaxLength(200)
   preheader?: string;
-
-  // ── Audience filter (optional, defaults to all consented participants) ──
 
   @IsUUID()
   @IsOptional()

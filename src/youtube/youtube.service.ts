@@ -1,4 +1,4 @@
-// application/youtube-search.service.ts
+
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Brackets } from 'typeorm';
@@ -26,13 +26,9 @@ export class YoutubeSearchService {
 
     if (!sanitized && !categoryFilter) {
       return this.getCachedLatest(skip, limit, currentPage);
-    }
-
-    // Normalizing category to lowercase for the cache key to prevent duplicate caches for "Backend" and "backend"
+    }
     const normalizedCategory = categoryFilter.toLowerCase();
-    const cacheKey = `${YOUTUBE_CACHE.SEARCH_PREFIX}${sanitized}:cat_${normalizedCategory}:${skip}:${limit}`;
-
-    // 1. Safe Redis lookup (returns null instantly if circuit is OPEN)
+    const cacheKey = `${YOUTUBE_CACHE.SEARCH_PREFIX}${sanitized}:cat_${normalizedCategory}:${skip}:${limit}`;
     const cachedResult = await this.resilientRedis.get(cacheKey);
     if (cachedResult) {
       return JSON.parse(cachedResult);
@@ -40,9 +36,7 @@ export class YoutubeSearchService {
 
     this.logger.debug('Executing PostgreSQL GIN-optimized fallback query.');
 
-    const qb = this.videoRepository.createQueryBuilder('video');
-
-    // 3. Category search using text casting to hit the pg_trgm index perfectly
+    const qb = this.videoRepository.createQueryBuilder('video');
     if (categoryFilter) {
       qb.andWhere('video.category::text ILIKE :categoryFilter', {
         categoryFilter: `%${categoryFilter}%`

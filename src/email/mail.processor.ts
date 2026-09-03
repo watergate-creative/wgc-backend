@@ -14,7 +14,6 @@ export class MailProcessor extends WorkerHost {
   private transporter: nodemailer.Transporter;
   private readonly activeProvider: MailProvider;
 
-  // Cache to store compiled templates in memory
   private templateCache = new Map();
 
   constructor(private readonly configService: ConfigService) {
@@ -26,8 +25,6 @@ export class MailProcessor extends WorkerHost {
 
     this.initializeTransporter();
   }
-
-  // ─── TRANSPORTER FACTORY ────────────────────────────────────────
 
   private initializeTransporter() {
     switch (this.activeProvider) {
@@ -65,8 +62,6 @@ export class MailProcessor extends WorkerHost {
     });
   }
 
-  // ─── SENDER ADDRESS ─────────────────────────────────────────────
-
   private getSenderAddress(): string {
     const appName = this.configService.get('APP_NAME') || 'Watergate Church Global';
 
@@ -80,15 +75,12 @@ export class MailProcessor extends WorkerHost {
     }
   }
 
-  // ─── TEMPLATE ENGINE ────────────────────────────────────────────
-
   private async getCompiledTemplate(templateName: string): Promise<handlebars.TemplateDelegate>  {
-    // Return cached version if it exists
+
     if (this.templateCache.has(templateName)) {
       return this.templateCache.get(templateName)!;
     }
 
-    // Resolve the path dynamically relative to the current file (__dirname)
     const templatePath = path.join(__dirname, 'templates', `${templateName}.hbs`);
     
     try {
@@ -105,8 +97,6 @@ export class MailProcessor extends WorkerHost {
     }
   }
 
-  // ─── JOB PROCESSOR ──────────────────────────────────────────────
-
   async process(job: Job): Promise<void> {
     if (job.name !== SEND_EMAIL_JOB) return;
 
@@ -114,15 +104,13 @@ export class MailProcessor extends WorkerHost {
     const from = this.getSenderAddress();
 
     try {
-      // 1. Get and compile the template
+
       const compiledTemplate = await this.getCompiledTemplate(template);
-      
-      // 2. Inject context to generate final HTML
+
       const html = compiledTemplate(context);
 
       this.logger.debug(`Sending email to ${to} via ${this.activeProvider}...`);
-      
-      // 3. Send via Nodemailer
+
       await this.transporter.sendMail({ from, to, subject, html });
       this.logger.log(`Email successfully sent to ${to} via ${this.activeProvider}`);
     } catch (error) {
