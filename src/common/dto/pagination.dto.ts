@@ -1,4 +1,4 @@
-import { IsOptional, IsInt, Min, Max } from 'class-validator';
+import { IsOptional, IsInt, Min, Max, IsEnum } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -17,6 +17,11 @@ export class PaginationQueryDto {
   @Min(1)
   @Max(100)
   limit: number = 10;
+
+  @ApiPropertyOptional({ enum: ['ASC', 'DESC'], default: 'DESC', description: 'Sort order' })
+  @IsOptional()
+  @IsEnum(['ASC', 'DESC'])
+  order?: 'ASC' | 'DESC' = 'DESC';
 
   get skip(): number {
     return (this.page - 1) * this.limit;

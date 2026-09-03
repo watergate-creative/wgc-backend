@@ -85,7 +85,7 @@ export class EventsService {
 
     this.applyFilters(qb, query);
 
-    qb.orderBy('event.startDate', 'ASC')
+    qb.orderBy('event.startDate', query.order || 'DESC')
       .skip(query.skip)
       .take(query.limit);
 
