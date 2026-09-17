@@ -10,6 +10,7 @@ import { Event, EventStatus } from './entities/event.entity.js';
 import { CreateEventDto, UpdateEventDto, EventQueryDto } from './dto/event.dto.js';
 import { ResilientRedisService } from '../infrastructure/redis/resilient-redis-service.js';
 import { EVENT_CACHE } from '../common/redis/cache.constants.js';
+import { DashboardService } from '../dashboard/dashboard.service.js';
 import { createHash } from 'crypto';
 
 @Injectable()
@@ -20,6 +21,7 @@ export class EventsService {
     @InjectRepository(Event)
     private readonly eventRepository: Repository<Event>,
     private readonly redis: ResilientRedisService,
+    private readonly dashboardService: DashboardService,
   ) { }
 
   private hashQuery(params: Record<string, unknown>): string {
@@ -67,6 +69,7 @@ export class EventsService {
     this.logger.log(`Event created: "${saved.title}" (${saved.slug})`);
 
     await this.invalidateEventCache();
+    await this.dashboardService.incrementStat('events');
 
     return saved;
   }
@@ -81,6 +84,7 @@ export class EventsService {
 
     const qb = this.eventRepository
       .createQueryBuilder('event')
+      .leftJoinAndSelect('event.eventType', 'eventType')
       .loadRelationIdAndMap('event.participantCount', 'event.participants');
 
     this.applyFilters(qb, query);
@@ -107,6 +111,7 @@ export class EventsService {
 
     const data = await this.eventRepository
       .createQueryBuilder('event')
+      .leftJoinAndSelect('event.eventType', 'eventType')
       .loadRelationIdAndMap('event.participantCount', 'event.participants')
       .where('event.status = :status', { status: EventStatus.PUBLISHED })
       .andWhere('event.endDate >= :now', { now: new Date() })
@@ -134,6 +139,7 @@ export class EventsService {
     const [upcoming, ongoing, past] = await Promise.all([
       this.eventRepository
         .createQueryBuilder('event')
+        .leftJoinAndSelect('event.eventType', 'eventType')
         .where('event.status = :status', { status: EventStatus.PUBLISHED })
         .orderBy('event.startDate', 'ASC')
         .take(limit)
@@ -141,6 +147,7 @@ export class EventsService {
 
       this.eventRepository
         .createQueryBuilder('event')
+        .leftJoinAndSelect('event.eventType', 'eventType')
         .where('event.status = :status', { status: EventStatus.ONGOING })
         .orderBy('event.startDate', 'ASC')
         .take(limit)
@@ -148,6 +155,7 @@ export class EventsService {
 
       this.eventRepository
         .createQueryBuilder('event')
+        .leftJoinAndSelect('event.eventType', 'eventType')
         .where('event.status = :status', { status: EventStatus.COMPLETED })
         .orderBy('event.endDate', 'DESC')
         .take(limit)
@@ -171,7 +179,7 @@ export class EventsService {
 
     const event = await this.eventRepository.findOne({
       where: { slug },
-      relations: { 'participants': true },
+      relations: { participants: true, eventType: true },
     });
     if (!event) {
       throw new NotFoundException(`Event "${slug}" not found`);
@@ -192,7 +200,7 @@ export class EventsService {
 
     const event = await this.eventRepository.findOne({
       where: { id },
-      relations: { 'participants': true },
+      relations: { participants: true, eventType: true },
     });
     if (!event) {
       throw new NotFoundException(`Event with ID "${id}" not found`);
@@ -240,6 +248,7 @@ export class EventsService {
     this.logger.log(`Event soft-deleted: ${id}`);
 
     await this.invalidateEventCache();
+    await this.dashboardService.decrementStat('events');
   }
 
   async incrementRegistrationCount(eventId: string): Promise<void> {
@@ -296,7 +305,7 @@ export class EventsService {
   }
 
   private applyFilters(qb: SelectQueryBuilder<Event>, query: EventQueryDto): void {
-    const { type, status, search, fromDate, toDate } = query;
+    const { typeId, status, search, fromDate, toDate } = query;
 
     if (fromDate) {
       qb.andWhere('DATE(event.endDate) >= DATE(:fromDate)', { fromDate });
@@ -306,8 +315,8 @@ export class EventsService {
       qb.andWhere('DATE(event.startDate) <= DATE(:toDate)', { toDate });
     }
 
-    if (type) {
-      qb.andWhere('event.type = :type', { type });
+    if (typeId) {
+      qb.andWhere('event.typeId = :typeId', { typeId });
     }
 
     if (status) {

@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { NotificationType } from '../../types/notification-types.js';
+import { FormType } from '../../../forms/entities/form-entry.entity.js';
 import { INotificationTemplateProvider } from '../template-provider.interface.js';
 
 @Injectable()
@@ -54,19 +55,25 @@ export class FormSubmissionAcknowledgementProvider implements INotificationTempl
   }
 
   getSmsBody(ctx: Record<string, unknown>): string {
-    const messages: Record<string, string> = {
-      Volunteer: `Hi ${ctx['fullName']}, thank you for signing up to volunteer at WaterGate Church! Our team will reach out to you shortly.`,
-      'Naming Ceremony': `Hi ${ctx['fullName']}, your naming ceremony registration has been received. We will contact you to confirm the details.`,
-      'New Comers': `Hi ${ctx['fullName']}, welcome to WaterGate Church! We are so glad you connected with us. Expect a follow-up from our team.`,
-      'Altar Call': `Hi ${ctx['fullName']}, what a beautiful decision! We are here to support you. Someone from our pastoral team will be in touch.`,
-      'Pre-Marital Counselling': `Hi ${ctx['fullName']}, your pre-marital counselling registration has been received. Our counselling team will reach out to schedule your sessions.`,
-      Counselling: `Hi ${ctx['fullName']}, your counselling request has been received. A member of our team will contact you to arrange a session.`,
-      Feedback: `Hi ${ctx['fullName']}, thank you for your feedback! Your thoughts help us serve better.`,
-      Testimony: `Hi ${ctx['fullName']}, thank you for sharing your testimony! Your story is an encouragement to us all.`,
+    const fullName = ctx['fullName'] as string;
+
+    // Using Record<FormType, string> ensures a compile-time error if a new
+    // FormType is added without a corresponding SMS message here.
+    const messages: Record<FormType, string> = {
+      [FormType.VOLUNTEER]: `Hi ${fullName}, thank you for signing up to volunteer at WaterGate Church! Our team will reach out to you shortly.`,
+      [FormType.NAMING_CEREMONY]: `Hi ${fullName}, your naming ceremony registration has been received. We will contact you to confirm the details.`,
+      [FormType.NEW_COMERS]: `Hi ${fullName}, welcome to WaterGate Church! We are so glad you connected with us. Expect a follow-up from our team.`,
+      [FormType.ALTAR_CALL]: `Hi ${fullName}, what a beautiful decision! We are here to support you. Someone from our pastoral team will be in touch.`,
+      [FormType.PRE_MARITAL_COUNSELLING]: `Hi ${fullName}, your pre-marital counselling registration has been received. Our counselling team will reach out to schedule your sessions.`,
+      [FormType.COUNSELLING]: `Hi ${fullName}, your counselling request has been received. A member of our team will contact you to arrange a session.`,
+      [FormType.FEEDBACK]: `Hi ${fullName}, thank you for your feedback! Your thoughts help us serve better.`,
+      [FormType.TESTIMONY]: `Hi ${fullName}, thank you for sharing your testimony! Your story is an encouragement to us all.`,
+      [FormType.CONTACT]: `Hi ${fullName}, your message has been received. We will get back to you shortly. Thank you!`,
     };
+
     return (
-      messages[ctx['formType'] as string] ??
-      `Hi ${ctx['fullName']}, your form submission has been received. Thank you!`
+      messages[ctx['formType'] as FormType] ??
+      `Hi ${fullName}, your form submission has been received. Thank you!`
     );
   }
 }

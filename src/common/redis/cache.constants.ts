@@ -27,3 +27,7 @@ export const PARTICIPANT_CACHE = {
 
   TTL_SEC: 120,
 } as const;
+
+export const DASHBOARD_CACHE = {
+  STATS_HASH: 'dashboard:stats',
+} as const;

@@ -1,20 +1,7 @@
 import { BaseEntity } from '../../common/entities/base.entities.js';
-import { Column, Entity, OneToMany } from 'typeorm';
+import { Column, Entity, OneToMany, ManyToOne, JoinColumn } from 'typeorm';
 import { Participant } from '../../participant/entities/participant.entity.js';
-
-export enum EventType {
-  SEERS_AND_SCRIBES = 'SEERS AND SCRIBES BOOTCAMP',
-  KDG = 'KINGDOM DIPLOMAT GATHERING',
-  FOCP = 'FEAST OF CHOICE PIECES',
-  KACS = 'KINGDOM ADVANCEMENT CITY SUMMIT',
-  ETHANIM = 'ETHANIM',
-  TYRANUS = 'TYRANUS RETREAT',
-  CRYSTAL_WATERS = 'CRYSTAL WATERS',
-  HUNDREDFOLD_SUMMIT = 'HUNDREDFOLD SUMMIT',
-  TRANSFORMATION_SERVICE = 'TRANSFORMATION SERVICE',
-  HARP_AND_BOWL = 'HARP AND BOWL',
-}
-
+import { EventType } from '../../event-types/entities/event-type.entity.js';
 export enum EventStatus {
   DRAFT = 'draft',
   PUBLISHED = 'published',
@@ -25,12 +12,14 @@ export enum EventStatus {
 
 @Entity('Events')
 export class Event extends BaseEntity {
-  @Column({
-    type: 'varchar',
-    length: 255,
-    default: EventType.TRANSFORMATION_SERVICE,
+  @ManyToOne(() => EventType, (eventType) => eventType.events, {
+    eager: true,
   })
-  type: EventType;
+  @JoinColumn({ name: 'typeId' })
+  eventType: EventType;
+
+  @Column({ nullable: true })
+  typeId: string;
   @Column({ type: 'varchar', length: 500, nullable: false })
   title: string;
 

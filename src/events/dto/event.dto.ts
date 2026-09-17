@@ -13,7 +13,7 @@ import {
   Min,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { EventStatus, EventType } from '../entities/event.entity.js';
+import { EventStatus } from '../entities/event.entity.js';
 import { PaginationQueryDto } from '../../common/dto/pagination.dto.js';
 
 export enum DayOfWeek {
@@ -107,9 +107,10 @@ export class CreateEventDto {
   @IsOptional()
   status?: EventStatus;
 
-  @ApiProperty({ enum: EventType, description: 'Type of event' })
-  @IsEnum(EventType)
-  type: EventType;
+  @ApiProperty({ example: 'uuid-string', description: 'ID of the Event Type' })
+  @IsString()
+  @IsNotEmpty()
+  typeId: string;
 }
 
 export class UpdateEventDto {
@@ -167,17 +168,17 @@ export class UpdateEventDto {
   @IsOptional()
   status?: EventStatus;
 
-  @ApiPropertyOptional({ enum: EventType })
-  @IsEnum(EventType)
+  @ApiPropertyOptional({ example: 'uuid-string', description: 'ID of the Event Type' })
+  @IsString()
   @IsOptional()
-  type?: EventType;
+  typeId?: string;
 }
 
 export class EventQueryDto extends PaginationQueryDto {
-  @ApiPropertyOptional({ enum: EventType, description: 'Filter by event type' })
-  @IsEnum(EventType)
+  @ApiPropertyOptional({ description: 'Filter by event type ID or slug' })
+  @IsString()
   @IsOptional()
-  type?: EventType;
+  typeId?: string;
 
   @ApiPropertyOptional({ enum: EventStatus, description: 'Filter by event status' })
   @IsEnum(EventStatus)

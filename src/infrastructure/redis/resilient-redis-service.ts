@@ -66,6 +66,45 @@ export class ResilientRedisService implements OnModuleDestroy {
     }
   }
 
+  async hgetall(key: string): Promise<Record<string, string> | null> {
+    if (!this.canExecute()) return null;
+
+    try {
+      const result = await this.executeWithTimeout(this.redis.hgetall(key));
+      this.onSuccess();
+      return result;
+    } catch (error) {
+      this.onFailure('HGETALL', key, error);
+      return null;
+    }
+  }
+
+  async hincrby(key: string, field: string, increment: number): Promise<number | null> {
+    if (!this.canExecute()) return null;
+
+    try {
+      const result = await this.executeWithTimeout(this.redis.hincrby(key, field, increment));
+      this.onSuccess();
+      return result;
+    } catch (error) {
+      this.onFailure('HINCRBY', `${key}:${field}`, error);
+      return null;
+    }
+  }
+
+  async hset(key: string, field: string, value: string | number): Promise<number | null> {
+    if (!this.canExecute()) return null;
+
+    try {
+      const result = await this.executeWithTimeout(this.redis.hset(key, field, value));
+      this.onSuccess();
+      return result;
+    } catch (error) {
+      this.onFailure('HSET', `${key}:${field}`, error);
+      return null;
+    }
+  }
+
   
   async deleteByPrefix(prefix: string): Promise<void> {
     if (!this.canExecute()) return;

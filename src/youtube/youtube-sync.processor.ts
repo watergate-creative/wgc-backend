@@ -7,6 +7,7 @@ import { YoutubeApiClient, PlaylistSummary } from './youtube-api.client';
 import { YOUTUBE_CACHE } from './youtube.constants';
 import Redis from 'ioredis';
 import { REDIS_CLIENT } from '../common/redis/redis.constants';
+import { DashboardService } from '../dashboard/dashboard.service';
 
 @Injectable()
 export class YoutubeSyncProcessor {
@@ -18,6 +19,7 @@ export class YoutubeSyncProcessor {
     private readonly videoRepository: Repository<YoutubeVideo>,
     private readonly apiClient: YoutubeApiClient,
     @Inject(REDIS_CLIENT) private readonly redisClient: Redis,
+    private readonly dashboardService: DashboardService,
   ) {}
 
   async processPipeline(channelId: string): Promise<void> {
@@ -143,6 +145,8 @@ export class YoutubeSyncProcessor {
 
     await pipeline.exec();
     
+    await this.dashboardService.setStat('media', totalRecords);
+
     this.logger.log(`Redis cache warmed successfully with ${totalRecords} records.`);
   }
 }

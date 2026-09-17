@@ -10,6 +10,8 @@ import { ScheduleModule } from '@nestjs/schedule';
 
 import { AuthModule } from './auth/auth.module.js';
 import { EventsModule } from './events/events.module.js';
+import { EventTypesModule } from './event-types/event-types.module.js';
+import { DashboardModule } from './dashboard/dashboard.module.js';
 import { ParticipantModule } from './participant/participant.module.js';
 import { FileUploadModule } from './file-upload/file-upload.module.js';
 import { NotificationsModule } from './notifications/notifications.module.js';
@@ -82,7 +84,9 @@ import { BullModule } from '@nestjs/bullmq';
     LoggerModule,
 
     AuthModule,
+    DashboardModule,
     EventsModule,
+    EventTypesModule,
     FileUploadModule,
     ParticipantModule,
     NotificationsModule,

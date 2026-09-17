@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
 import {
   IsNotEmpty,
   IsOptional,
@@ -13,6 +14,14 @@ import { PaginationQueryDto } from '../../common/dto/pagination.dto.js';
 
 export class CreateFormEntryDto {
   @ApiProperty({ enum: FormType, example: FormType.NEW_COMERS, description: 'Type of form being submitted' })
+  @Transform(({ value }) => {
+    if (typeof value !== 'string') return value;
+    return (
+      Object.values(FormType).find(
+        (v) => v.toLowerCase() === value.toLowerCase(),
+      ) ?? value
+    );
+  })
   @IsEnum(FormType)
   @IsNotEmpty()
   type: FormType;
@@ -76,6 +85,14 @@ export class UpdateFormEntryDto {
 
 export class FormEntryQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional({ enum: FormType, description: 'Filter by form type' })
+  @Transform(({ value }) => {
+    if (typeof value !== 'string') return value;
+    return (
+      Object.values(FormType).find(
+        (v) => v.toLowerCase() === value.toLowerCase(),
+      ) ?? value
+    );
+  })
   @IsEnum(FormType)
   @IsOptional()
   type?: FormType;

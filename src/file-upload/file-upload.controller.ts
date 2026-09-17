@@ -1,11 +1,14 @@
 import {
   Controller,
+  Get,
   Post,
   Delete,
   Param,
+  Query,
   UseInterceptors,
   UploadedFile,
 } from '@nestjs/common';
+import 'multer';
 import {
   ApiTags,
   ApiBearerAuth,
@@ -22,7 +25,7 @@ import { Roles } from '../common/decorators/roles.decorator.js';
 @Controller('uploads')
 @ApiBearerAuth()
 export class FileUploadController {
-  constructor(private readonly fileUploadService: FileUploadService) {}
+  constructor(private readonly fileUploadService: FileUploadService) { }
 
   @Post('image')
   @Roles('admin', 'editor')
@@ -54,5 +57,25 @@ export class FileUploadController {
   async deleteImage(@Param('publicId') publicId: string) {
     await this.fileUploadService.deleteImage(publicId);
     return { message: 'Image deleted successfully' };
+  }
+
+  @Get()
+  @Roles('admin', 'editor')
+  @ApiOperation({ summary: 'List images from Cloudinary (Admin/Editor)' })
+  @ApiResponse({ status: 200, description: 'Returns a list of images' })
+  async listImages(
+    @Query('folder') folder?: string,
+    @Query('maxResults') maxResults?: number,
+  ) {
+    return this.fileUploadService.listImages(folder, maxResults);
+  }
+
+  @Get(':publicId')
+  @Roles('admin', 'editor')
+  @ApiOperation({ summary: 'Get a single image from Cloudinary (Admin/Editor)' })
+  @ApiResponse({ status: 200, description: 'Returns image details' })
+  @ApiResponse({ status: 404, description: 'Image not found' })
+  async getImage(@Param('publicId') publicId: string) {
+    return this.fileUploadService.getImage(publicId);
   }
 }

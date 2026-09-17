@@ -11,6 +11,7 @@ import {
   UpdateFormEntryDto,
   FormEntryQueryDto,
 } from './dto/form.dto.js';
+import { DashboardService } from '../dashboard/dashboard.service.js';
 import { NotificationService } from '../notifications/notification.service.js';
 import {
   NotificationType,
@@ -25,7 +26,8 @@ export class FormsService {
     @InjectRepository(FormEntry)
     private readonly formEntryRepository: Repository<FormEntry>,
     private readonly notificationService: NotificationService,
-  ) {}
+    private readonly dashboardService: DashboardService,
+  ) { }
 
   async create(dto: CreateFormEntryDto): Promise<FormEntry> {
     const entry = this.formEntryRepository.create(dto);
@@ -55,6 +57,8 @@ export class FormsService {
           `Failed to send form acknowledgement to ${saved.email}: ${error.message}`,
         );
       });
+
+    await this.dashboardService.incrementStat('forms');
 
     return saved;
   }
@@ -108,5 +112,7 @@ export class FormsService {
     const entry = await this.findOne(id);
     await this.formEntryRepository.softRemove(entry);
     this.logger.log(`Form entry soft-deleted: ${id}`);
+
+    await this.dashboardService.decrementStat('forms');
   }
 }

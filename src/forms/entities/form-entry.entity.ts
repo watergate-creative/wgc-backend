@@ -10,6 +10,7 @@ export enum FormType {
   COUNSELLING = 'Counselling',
   FEEDBACK = 'Feedback',
   TESTIMONY = 'Testimony',
+  CONTACT = 'Contact Us',
 }
 
 @Entity('FormEntries')

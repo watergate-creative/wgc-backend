@@ -1,9 +1,11 @@
 import {
   Injectable,
   BadRequestException,
+  NotFoundException,
   Logger,
   InternalServerErrorException,
 } from '@nestjs/common';
+import 'multer';
 import { CloudinaryProvider } from './cloudinary.provider.js';
 
 const ALLOWED_MIME_TYPES = [
@@ -29,7 +31,7 @@ export interface UploadResult {
 export class FileUploadService {
   private readonly logger = new Logger(FileUploadService.name);
 
-  constructor(private readonly cloudinaryProvider: CloudinaryProvider) {}
+  constructor(private readonly cloudinaryProvider: CloudinaryProvider) { }
 
   async uploadImage(
     file: Express.Multer.File,
@@ -89,6 +91,48 @@ export class FileUploadService {
     } catch (error) {
       this.logger.error(`Cloudinary delete failed: ${(error as Error).message}`);
       throw new InternalServerErrorException('Failed to delete image');
+    }
+  }
+
+  async listImages(folder = 'wgc', maxResults = 50): Promise<any[]> {
+    try {
+      let searchApi = this.cloudinaryProvider.getCloudinary().search.max_results(maxResults);
+      if (folder) {
+        searchApi = searchApi.expression(`folder:${folder}*`);
+      }
+      const result = await searchApi.execute();
+      return result.resources.map((res: any) => ({
+        url: res.url,
+        secureUrl: res.secure_url,
+        publicId: res.public_id,
+        format: res.format,
+        width: res.width,
+        height: res.height,
+        bytes: res.bytes,
+        createdAt: res.created_at,
+      }));
+    } catch (error) {
+      this.logger.error(`Cloudinary list images failed: ${(error as Error).message}`);
+      throw new InternalServerErrorException('Failed to list images');
+    }
+  }
+
+  async getImage(publicId: string): Promise<any> {
+    try {
+      const result = await this.cloudinaryProvider.getCloudinary().api.resource(publicId);
+      return {
+        url: result.url,
+        secureUrl: result.secure_url,
+        publicId: result.public_id,
+        format: result.format,
+        width: result.width,
+        height: result.height,
+        bytes: result.bytes,
+        createdAt: result.created_at,
+      };
+    } catch (error) {
+      this.logger.error(`Cloudinary get image failed: ${(error as Error).message}`);
+      throw new NotFoundException(`Image with publicId ${publicId} not found`);
     }
   }
 
