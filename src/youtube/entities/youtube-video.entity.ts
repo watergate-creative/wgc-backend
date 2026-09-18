@@ -1,5 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, Index } from 'typeorm';
-import { BaseEntity } from '../../common/entities/base.entities';
+import { BaseEntity } from '../../common/entities/base.entities.js';
 
 @Entity('youtube_videos')
 export class YoutubeVideo extends BaseEntity{

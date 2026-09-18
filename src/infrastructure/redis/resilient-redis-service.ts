@@ -1,7 +1,7 @@
 
 import { Injectable, Logger, Inject, OnModuleDestroy } from '@nestjs/common';
 import Redis, { ChainableCommander, Pipeline } from 'ioredis';
-import { REDIS_CLIENT } from '../../common/redis/redis.constants';
+import { REDIS_CLIENT } from '../../common/redis/redis.constants.js';
 
 enum CircuitState {
   CLOSED = 'CLOSED',       // Normal operation: Redis is healthy
