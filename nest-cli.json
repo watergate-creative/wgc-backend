@@ -8,8 +8,6 @@
         "include": "**/*.hbs",
         "watchAssets": true
       }
-    ],
-    "builder":"swc",
-    "typeCheck": false
+    ]
   }
 }
