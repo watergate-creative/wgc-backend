@@ -1,7 +1,7 @@
 # Use a multi-stage build for a smaller, more secure production image
 
 # ─── STAGE 1: BUILD ───────────────────────────────────────────
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 
 # Set working directory
 WORKDIR /app
@@ -19,10 +19,10 @@ COPY . .
 RUN npm run build
 
 # Install only production dependencies for the final image
-RUN npm ci --only=production && npm cache clean --force
+RUN npm ci --omit=dev && npm cache clean --force
 
 # ─── STAGE 2: PRODUCTION ──────────────────────────────────────
-FROM node:20-alpine AS production
+FROM node:22-alpine AS production
 
 # Set Node environment
 ENV NODE_ENV production
