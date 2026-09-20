@@ -26,6 +26,7 @@ import {
   NewWeekWishesProvider,
   NewMonthWishesProvider,
   NewsletterProvider,
+  AdminImportantMessageProvider,
 } from './templates/providers/marketing.providers.js';
 
 import { EmailChannel } from './channels/email.channel.js';
@@ -63,6 +64,7 @@ import { NotificationController } from './controllers/newsletter.controller.js';
     NewWeekWishesProvider,
     NewMonthWishesProvider,
     NewsletterProvider,
+    AdminImportantMessageProvider,
     {
       provide: NOTIFICATION_TEMPLATE_PROVIDERS,
       useFactory: (...providers: any[]) => providers,
@@ -76,6 +78,7 @@ import { NotificationController } from './controllers/newsletter.controller.js';
         NewWeekWishesProvider,
         NewMonthWishesProvider,
         NewsletterProvider,
+        AdminImportantMessageProvider,
       ],
     },
 

@@ -46,6 +46,7 @@ export class NotificationOrchestrator {
     recipient: NotificationRecipient,
     context: Record<string, unknown>,
     requestedChannels?: DeliveryChannel[],
+    sentByUserId?: string,
   ): Promise<DeliveryResult[]> {
     const channels = requestedChannels ?? [DeliveryChannel.EMAIL];
     const results: DeliveryResult[] = [];
@@ -77,7 +78,7 @@ export class NotificationOrchestrator {
       const result = await this.safeDispatch(channel, payload);
       results.push(result);
 
-      await this.persistLog(type, channelType, recipient, payload.subject ?? '', result);
+      await this.persistLog(type, channelType, recipient, payload.subject ?? '', result, sentByUserId);
     }
 
     return results;
@@ -136,6 +137,7 @@ export class NotificationOrchestrator {
     recipient: NotificationRecipient,
     subject: string,
     result: DeliveryResult,
+    sentByUserId?: string,
   ): Promise<void> {
     try {
       const log = this.logRepository.create({
@@ -149,6 +151,7 @@ export class NotificationOrchestrator {
           : NotificationStatus.FAILED,
         errorMessage: result.error ?? "",
         messageId: result.messageId ?? "",
+        sentByUserId,
       });
 
       await this.logRepository.save(log);

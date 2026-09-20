@@ -39,6 +39,7 @@ export class NotificationService {
   
   async broadcast<T extends NotificationType>(
     payload: BroadcastPayload<T>,
+    sentByUserId?: string,
   ): Promise<{ totalRecipients: number; results: DeliveryResult[] }> {
     const { type, channels, context, audienceFilter } = payload;
 
@@ -72,6 +73,7 @@ export class NotificationService {
             recipient,
             personalizedContext,
             channels,
+            sentByUserId,
           );
         }),
       );

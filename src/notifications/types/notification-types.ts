@@ -9,6 +9,7 @@ export enum DeliveryChannel {
 
 export enum NotificationType {
 
+  ADMIN_IMPORTANT_MESSAGE = 'admin_important_message',
   EVENT_REGISTRATION_CONFIRMATION = 'event_registration_confirmation',
   SESSION_BOOKING_CONFIRMATION = 'session_booking_confirmation',
   FORM_SUBMISSION_ACKNOWLEDGEMENT = 'form_submission_acknowledgement',
@@ -107,6 +108,14 @@ export interface NotificationContextMap {
     preheader?: string;
     year?: number;
   };
+
+  [NotificationType.ADMIN_IMPORTANT_MESSAGE]: {
+    subject: string;
+    htmlContent: string;
+    category: string;
+    priority?: string;
+    year?: number;
+  };
 }
 
 export interface NotificationRecipient {
@@ -137,6 +146,8 @@ export interface AudienceFilter {
   hasContactConsent?: boolean;
   
   hasAttended?: boolean;
+
+  roles?: string[];
 }
 
 export interface DeliveryResult {

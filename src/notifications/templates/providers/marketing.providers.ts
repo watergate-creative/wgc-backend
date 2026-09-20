@@ -45,3 +45,14 @@ export class NewsletterProvider implements INotificationTemplateProvider {
     return String(ctx['subject']);
   }
 }
+
+@Injectable()
+export class AdminImportantMessageProvider implements INotificationTemplateProvider {
+  readonly type = NotificationType.ADMIN_IMPORTANT_MESSAGE;
+  readonly emailTemplate = 'admin-message';
+
+  getSubject(ctx: Record<string, unknown>): string {
+    const priority = ctx['priority'] === 'HIGH' ? '[URGENT] ' : '';
+    return `${priority}${String(ctx['subject'])}`;
+  }
+}

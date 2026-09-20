@@ -43,4 +43,8 @@ export class NotificationLog extends BaseEntity {
 
   @Column({ type: 'varchar', length: 200, nullable: true })
   messageId?: string;
+
+  @Column({ type: 'uuid', nullable: true })
+  @Index()
+  sentByUserId?: string;
 }
