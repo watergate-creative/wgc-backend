@@ -29,7 +29,7 @@ export class ZeptomailStrategy implements IMailProviderStrategy {
 
   getSenderAddress(): string {
     const appName = this.configService.get('APP_NAME') || 'Watergate Church Global';
-    return `"${appName}" <${this.configService.get('SMTP_FROM', 'noreply@watergatechurch.org')}>`;
+    return `"${appName}" <${this.configService.get('SMTP_FROM', 'info@watergatechurch.org')}>`;
   }
 
   async sendMail(options: { from: string; to: string; subject: string; html: string }): Promise<void> {
