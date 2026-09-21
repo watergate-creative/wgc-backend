@@ -3,6 +3,7 @@ import { EventTypesService } from './event-types.service.js';
 import { CreateEventTypeDto, UpdateEventTypeDto } from './dto/event-type.dto.js';
 import { Roles } from '../common/decorators/roles.decorator.js';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import { Public } from '../common/index.js';
 
 @ApiTags('event-types')
 @Controller('event-types')
@@ -19,6 +20,7 @@ export class EventTypesController {
   }
 
   @Get()
+  @Public()
   @ApiOperation({ summary: 'Get all event types' })
   @ApiQuery({ name: 'activeOnly', required: false, type: Boolean, description: 'Filter by active status' })
   findAll(@Query('activeOnly') activeOnly?: string) {
@@ -27,12 +29,14 @@ export class EventTypesController {
   }
 
   @Get(':id')
+  @Public()
   @ApiOperation({ summary: 'Get a specific event type by ID' })
   findOne(@Param('id') id: string) {
     return this.eventTypesService.findOne(id);
   }
 
   @Get('slug/:slug')
+  @Public()
   @ApiOperation({ summary: 'Get a specific event type by slug' })
   findBySlug(@Param('slug') slug: string) {
     return this.eventTypesService.findBySlug(slug);
