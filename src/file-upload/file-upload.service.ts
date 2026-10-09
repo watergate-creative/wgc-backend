@@ -6,6 +6,8 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import 'multer';
+import { randomBytes } from 'crypto';
+import { extname } from 'path';
 import { CloudinaryProvider } from './cloudinary.provider.js';
 
 const ALLOWED_MIME_TYPES = [
@@ -18,6 +20,7 @@ const ALLOWED_MIME_TYPES = [
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
 export interface UploadResult {
+  title: string;
   url: string;
   secureUrl: string;
   publicId: string;
@@ -39,6 +42,8 @@ export class FileUploadService {
   ): Promise<UploadResult> {
     this.validateFile(file);
 
+    const title = this.generateTitle(file.originalname);
+
     try {
       const result = await new Promise<any>((resolve, reject) => {
         const uploadStream = this.cloudinaryProvider
@@ -46,6 +51,8 @@ export class FileUploadService {
           .uploader.upload_stream(
             {
               folder,
+              public_id: title,
+              context: { title },
               resource_type: 'image',
               transformation: [
                 { quality: 'auto', fetch_format: 'auto' },
@@ -68,6 +75,7 @@ export class FileUploadService {
       );
 
       return {
+        title,
         url: result.url,
         secureUrl: result.secure_url,
         publicId: result.public_id,
@@ -96,12 +104,16 @@ export class FileUploadService {
 
   async listImages(folder = 'wgc', maxResults = 50): Promise<any[]> {
     try {
-      let searchApi = this.cloudinaryProvider.getCloudinary().search.max_results(maxResults);
+      let searchApi = this.cloudinaryProvider
+        .getCloudinary()
+        .search.max_results(maxResults)
+        .with_field('context');
       if (folder) {
         searchApi = searchApi.expression(`folder:${folder}*`);
       }
       const result = await searchApi.execute();
       return result.resources.map((res: any) => ({
+        title: this.extractTitle(res),
         url: res.url,
         secureUrl: res.secure_url,
         publicId: res.public_id,
@@ -121,6 +133,7 @@ export class FileUploadService {
     try {
       const result = await this.cloudinaryProvider.getCloudinary().api.resource(publicId);
       return {
+        title: this.extractTitle(result),
         url: result.url,
         secureUrl: result.secure_url,
         publicId: result.public_id,
@@ -134,6 +147,34 @@ export class FileUploadService {
       this.logger.error(`Cloudinary get image failed: ${(error as Error).message}`);
       throw new NotFoundException(`Image with publicId ${publicId} not found`);
     }
+  }
+
+  /**
+   * Builds a unique, URL-safe title from the original file name.
+   * e.g. "My Photo (1).PNG" -> "my-photo-1-1759869790123-a1b2c3"
+   */
+  private generateTitle(originalName: string): string {
+    const baseName = (originalName || 'image').replace(extname(originalName || ''), '');
+    const slug =
+      baseName
+        .normalize('NFKD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 80) || 'image';
+    const suffix = `${Date.now()}-${randomBytes(3).toString('hex')}`;
+    return `${slug}-${suffix}`;
+  }
+
+  /** Reads the stored title from Cloudinary context, falling back to the public ID. */
+  private extractTitle(resource: any): string {
+    return (
+      resource?.context?.custom?.title ??
+      resource?.context?.title ??
+      String(resource?.public_id ?? '').split('/').pop() ??
+      ''
+    );
   }
 
   private validateFile(file: Express.Multer.File): void {

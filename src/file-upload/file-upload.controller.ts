@@ -30,7 +30,11 @@ export class FileUploadController {
   @Post('image')
   @Roles('admin', 'editor')
   @UseInterceptors(FileInterceptor('file'))
-  @ApiOperation({ summary: 'Upload an image to Cloudinary (Admin/Editor)' })
+  @ApiOperation({
+    summary: 'Upload an image to Cloudinary (Admin/Editor)',
+    description:
+      'A unique title is generated from the original file name (slugified + timestamp + random suffix) and used as the image public ID.',
+  })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {
