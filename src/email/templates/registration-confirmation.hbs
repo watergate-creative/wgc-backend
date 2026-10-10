@@ -56,33 +56,42 @@
         <div class="ticket-row">
           <span class="ticket-label">Date & Duration</span>
           <span class="ticket-value">
-            📅 {{startDate}}
+            📅 {{formatDate startDate}}
             {{#if endDate}}
-               &nbsp;&ndash;&nbsp; {{endDate}}
+               &nbsp;&ndash;&nbsp; {{formatDate endDate}}
             {{/if}}
           </span>
         </div>
 
         {{#if selectedDays}}
         <div class="ticket-row">
-          <span class="ticket-label">Your Selected Days</span>
-          <div style="margin-top: 4px;">
-            {{#each selectedDays}}
-              <span class="schedule-badge">📅 {{this}}</span>
-            {{/each}}
-          </div>
+          <span class="ticket-label">Event Schedule</span>
+          <table style="width: 100%; border-collapse: collapse; margin-top: 8px; border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+            <thead>
+              <tr style="background: #e0e7ff; color: #1a237e; font-size: 12px; text-transform: uppercase;">
+                <th style="padding: 12px 14px; text-align: left; border-bottom: 2px solid #1a237e;">Selected Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{#each selectedDays}}
+              <tr>
+                <td style="padding: 12px 14px; border-bottom: 1px solid #e2e8f0; font-size: 14px; font-weight: 500; color: #1e293b; background: #ffffff;">📅 {{formatDate this}}</td>
+              </tr>
+              {{/each}}
+            </tbody>
+          </table>
         </div>
         {{/if}}
 
-        <div class="ticket-row">
+        <div class="ticket-row" style="margin-top: 16px;">
           <span class="ticket-label">Location</span>
           <span class="ticket-value">📍 {{location}}</span>
         </div>
 
         {{#if registrationId}}
-        <div class="ticket-row" style="margin-top: 16px; padding-top: 12px; border-top: 1px dashed #cbd5e1;">
+        <div class="ticket-row" style="margin-top: 20px; padding-top: 16px; border-top: 1px dashed #cbd5e1;">
           <span class="ticket-label">Registration ID / Ticket Number</span>
-          <span style="font-family: monospace; font-size: 16px; font-weight: bold; color: #1a237e;">#{{registrationId}}</span>
+          <span style="font-family: monospace; font-size: 20px; font-weight: bold; color: #1a237e; letter-spacing: 1px;">#{{formatGuid registrationId}}</span>
         </div>
         {{/if}}
       </div>

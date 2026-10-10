@@ -72,7 +72,8 @@ export class ParticipantService {
   ): Promise<Participant> {
     const event = await this.eventsService.findOne(eventId);
 
-    if (event.status !== EventStatus.PUBLISHED) {
+    // Allow registrations for events that are published OR currently ongoing
+    if (event.status !== EventStatus.PUBLISHED && event.status !== EventStatus.ONGOING) {
       throw new BadRequestException('This event is not currently accepting registrations');
     }
 

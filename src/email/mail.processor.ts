@@ -19,19 +19,39 @@ export class MailProcessor extends WorkerHost {
   ) {
     super();
     this.logger.log(`Mail processor initialised → ${this.mailStrategy.name}`);
+    this.registerHelpers();
   }
 
-  private async getCompiledTemplate(templateName: string): Promise<handlebars.TemplateDelegate>  {
+  private registerHelpers() {
+    handlebars.registerHelper('formatDate', (dateString: string) => {
+      if (!dateString) return '';
+      const date = new Date(dateString);
+      // E.g. "December 23, 2026"
+      return date.toLocaleDateString('en-US', {
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric'
+      });
+    });
+
+    handlebars.registerHelper('formatGuid', (guid: string) => {
+      if (!guid) return '';
+      // Extracts first part of the UUID and converts to uppercase, e.g. "F2B866FC"
+      return guid.split('-')[0].toUpperCase();
+    });
+  }
+
+  private async getCompiledTemplate(templateName: string): Promise<handlebars.TemplateDelegate> {
     if (this.templateCache.has(templateName)) {
       return this.templateCache.get(templateName)!;
     }
 
     const templatePath = path.join(__dirname, 'templates', `${templateName}.hbs`);
-    
+
     try {
       const templateSource = await fs.readFile(templatePath, 'utf-8');
       const compiled = handlebars.compile(templateSource);
-      
+
       this.templateCache.set(templateName, compiled);
       return compiled;
     } catch (error) {
