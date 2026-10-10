@@ -32,10 +32,15 @@ import { GmailStrategy } from './providers/gmail.strategy';
         
         switch (provider) {
           case MailProvider.ZEPTOMAIL:
-            return zeptoMailStrategy.isAvailable() ? zeptoMailStrategy : gmailStrategy;
+            if (!zeptoMailStrategy.isAvailable()) {
+              throw new Error('ZeptoMail is selected but SMTP_HOST is not configured in your environment variables.');
+            }
+            return zeptoMailStrategy;
           case MailProvider.GMAIL:
-          default:
             return gmailStrategy;
+          default:
+            // Default to Zeptomail if available, otherwise Gmail
+            return zeptoMailStrategy.isAvailable() ? zeptoMailStrategy : gmailStrategy;
         }
       },
       inject: [ConfigService, ZeptomailStrategy, GmailStrategy],
