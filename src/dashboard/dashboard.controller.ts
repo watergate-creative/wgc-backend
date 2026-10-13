@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { DashboardService } from './dashboard.service.js';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
@@ -15,8 +15,16 @@ export class DashboardController {
   @Get('stats')
   @Roles('admin', 'editor')
   @ApiOperation({ summary: 'Get aggregated dashboard statistics' })
-  @ApiResponse({ status: 200, description: 'Returns current stats from Redis' })
+  @ApiResponse({ status: 200, description: 'Returns current stats from Redis (Cache-Aside)' })
   async getStats() {
     return this.dashboardService.getStats();
+  }
+
+  @Post('stats/sync')
+  @Roles('admin')
+  @ApiOperation({ summary: 'Re-synchronize dashboard statistics with database' })
+  @ApiResponse({ status: 200, description: 'Stats re-synchronized successfully' })
+  async syncStats() {
+    return this.dashboardService.syncStats();
   }
 }
