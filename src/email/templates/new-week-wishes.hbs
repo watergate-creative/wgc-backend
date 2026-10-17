@@ -4,18 +4,19 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body { font-family: 'Segoe UI', Arial, sans-serif; background: #f4f4f7; margin: 0; padding: 0; -webkit-font-smoothing: antialiased; }
-    .container { max-width: 600px; margin: 20px auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-    .header { background: linear-gradient(135deg, #1a237e, #283593); color: #ffffff; text-align: center; padding: 36px 24px; }
-    .header h1 { margin: 0; font-size: 24px; font-weight: 600; letter-spacing: -0.5px; }
+    body { font-family: Arial, sans-serif; background: #edf2ef; margin: 0; padding: 0; color: #263331; -webkit-font-smoothing: antialiased; }
+    .container { max-width: 600px; margin: 20px auto; background: #ffffff; border: 1px solid #dce5df; border-radius: 10px; overflow: hidden; }
+    .header { background: #173d3a; border-bottom: 4px solid #d3aa58; color: #ffffff; text-align: center; padding: 36px 24px; }
+    .header h1 { margin: 0; font-family: Georgia, serif; font-size: 25px; line-height: 1.3; font-weight: 600; }
     .header .emoji { font-size: 36px; display: block; margin-bottom: 12px; }
-    .body { padding: 32px 24px; color: #333333; line-height: 1.7; }
-    .body h2 { color: #1a237e; margin-top: 0; font-size: 20px; font-weight: 600; }
-    .verse-card { background: linear-gradient(135deg, #e8eaf6, #c5cae9); border-radius: 10px; padding: 24px; margin: 24px 0; text-align: center; border-left: 4px solid #1a237e; }
-    .verse-text { font-size: 16px; font-style: italic; color: #1e293b; line-height: 1.6; margin: 0 0 8px 0; }
-    .verse-ref { font-size: 13px; font-weight: 700; color: #1a237e; text-transform: uppercase; letter-spacing: 0.5px; }
-    .message-box { background: #f8f9fa; border-radius: 8px; padding: 20px; margin: 20px 0; font-size: 15px; color: #475569; }
-    .footer { text-align: center; padding: 24px; font-size: 12px; color: #94a3b8; border-top: 1px solid #f1f5f9; background: #fafafa; }
+    .body { padding: 32px 28px; color: #34413d; line-height: 1.7; }
+    .body h2 { color: #17615b; margin-top: 0; font-size: 20px; font-weight: 600; }
+    .verse-card { background: #f5f7f3; border: 1px solid #dce5df; border-left: 4px solid #d3aa58; border-radius: 6px; padding: 24px; margin: 24px 0; text-align: center; }
+    .verse-text { font-size: 16px; font-style: italic; color: #34413d; line-height: 1.6; margin: 0 0 8px 0; }
+    .verse-ref { font-size: 13px; font-weight: 700; color: #17615b; text-transform: uppercase; letter-spacing: 0.5px; }
+    .message-box { background: #eaf2ed; border-radius: 6px; padding: 20px; margin: 20px 0; font-size: 15px; color: #34413d; }
+    .footer { text-align: center; padding: 24px; font-size: 12px; color: #74827b; border-top: 1px solid #dce5df; background: #f7f9f6; }
+    @media only screen and (max-width: 620px) { .container { margin: 0 auto; border-radius: 0; } .body { padding: 26px 20px; } .verse-card { padding: 20px 16px; } }
   </style>
 </head>
 <body>
@@ -44,7 +45,7 @@
       {{/if}}
 
       <p>May this week be filled with divine favour, productivity, and joy. Step into it with confidence — God goes before you!</p>
-      <p style="margin-top: 24px; font-weight: 600; color: #1a237e;">God bless you abundantly! 🙏</p>
+      <p style="margin-top: 24px; font-weight: 600; color: #17615b;">God bless you abundantly! 🙏</p>
     </div>
     <div class="footer">
       <p>&copy; {{year}} Watergate Church Global. All rights reserved.</p>

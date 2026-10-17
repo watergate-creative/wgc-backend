@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { FormEntry } from './entities/form-entry.entity.js';
+import { FormEntry, FormEntryStatus } from './entities/form-entry.entity.js';
 import {
   CreateFormEntryDto,
   UpdateFormEntryDto,
@@ -72,6 +72,10 @@ export class FormsService {
       qb.andWhere('entry.type = :type', { type: query.type });
     }
 
+    if (query.status) {
+      qb.andWhere('entry.status = :status', { status: query.status });
+    }
+
     if (query.email) {
       qb.andWhere('entry.email = :email', { email: query.email });
     }
@@ -105,6 +109,14 @@ export class FormsService {
     Object.assign(entry, dto);
     const updated = await this.formEntryRepository.save(entry);
     this.logger.log(`Form entry updated: ${id}`);
+    return updated;
+  }
+
+  async updateStatus(id: string, status: FormEntryStatus): Promise<FormEntry> {
+    const entry = await this.findOne(id);
+    entry.status = status;
+    const updated = await this.formEntryRepository.save(entry);
+    this.logger.log(`Form entry status updated: ${id} -> ${status}`);
     return updated;
   }
 

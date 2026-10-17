@@ -20,6 +20,7 @@ import {
   CreateFormEntryDto,
   UpdateFormEntryDto,
   FormEntryQueryDto,
+  UpdateFormEntryStatusDto,
 } from './dto/form.dto.js';
 import { Public } from '../common/decorators/public.decorator.js';
 import { Roles } from '../common/decorators/roles.decorator.js';
@@ -58,6 +59,18 @@ export class FormsController {
   @ApiResponse({ status: 404, description: 'Form entry not found' })
   async findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.formsService.findOne(id);
+  }
+
+  @Patch(':id/status')
+  @Roles('admin')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Approve, reject, or cancel a form entry (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Form entry status updated' })
+  async updateStatus(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateFormEntryStatusDto,
+  ) {
+    return this.formsService.updateStatus(id, dto.status);
   }
 
   @Patch(':id')

@@ -2,19 +2,21 @@
 <html>
 <head>
   <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body { font-family: 'Segoe UI', Arial, sans-serif; background: #f4f4f7; margin: 0; padding: 0; }
-    .container { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
-    .header { background: linear-gradient(135deg, #1a237e, #283593); color: #ffffff; text-align: center; padding: 36px 24px; }
-    .countdown-banner { background: #e8eaf6; color: #1a237e; text-align: center; padding: 12px; font-weight: bold; font-size: 16px; border-bottom: 1px solid #c5cae9; }
-    .header h1 { margin: 0; font-size: 24px; font-weight: 600; }
-    .body { padding: 32px 24px; color: #333333; line-height: 1.6; }
-    .body h2 { color: #1a237e; margin-top: 0; font-size: 18px; }
-    .event-box { background: #f8f9fa; border-radius: 8px; padding: 16px; margin: 20px 0; text-align: center; border: 1px solid #eeeeee; }
-    .checklist { background: #ffffff; border-left: 3px solid #ff9800; padding: 10px 10px 10px 20px; margin: 20px 0; font-size: 14px; }
+    body { font-family: Arial, sans-serif; background: #edf2ef; margin: 0; padding: 0; color: #263331; -webkit-font-smoothing: antialiased; }
+    .container { max-width: 600px; margin: 20px auto; background: #ffffff; border: 1px solid #dce5df; border-radius: 10px; overflow: hidden; }
+    .header { background: #173d3a; border-bottom: 4px solid #d3aa58; color: #ffffff; text-align: center; padding: 36px 24px; }
+    .countdown-banner { background: #eaf2ed; color: #17615b; text-align: center; padding: 14px 12px; font-weight: bold; font-size: 16px; border-bottom: 1px solid #cbdcd1; }
+    .header h1 { margin: 0; font-family: Georgia, serif; font-size: 25px; line-height: 1.3; font-weight: 600; }
+    .body { padding: 32px 28px; color: #34413d; line-height: 1.7; }
+    .body h2 { color: #17615b; margin-top: 0; font-size: 20px; }
+    .event-box { background: #f5f7f3; border-left: 4px solid #d3aa58; border-radius: 6px; padding: 20px 16px; margin: 20px 0; text-align: center; border-top: 1px solid #dce5df; border-right: 1px solid #dce5df; border-bottom: 1px solid #dce5df; }
+    .checklist { background: #fbfcfa; border-left: 3px solid #d3aa58; padding: 14px 12px 14px 20px; margin: 20px 0; font-size: 14px; color: #43534c; }
     .btn-container { text-align: center; margin: 30px 0; }
-    .btn { background: #1a237e; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-weight: bold; display: inline-block; }
-    .footer { text-align: center; padding: 20px; font-size: 12px; color: #999999; border-top: 1px solid #eeeeee; background: #fafafa; }
+    .btn { background: #17615b; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 5px; font-weight: bold; display: inline-block; }
+    .footer { text-align: center; padding: 20px; font-size: 12px; color: #74827b; border-top: 1px solid #dce5df; background: #f7f9f6; }
+    @media only screen and (max-width: 620px) { .container { margin: 0 auto; border-radius: 0; } .body { padding: 26px 20px; } }
   </style>
 </head>
 <body>
@@ -30,7 +32,7 @@
       <p>This is a quick reminder that <strong>{{eventName}}</strong> is just around the corner. Everything is set, and we are looking forward to a wonderful time with you.</p>
       
       <div class="event-box">
-        <h3 style="margin: 0 0 8px 0; color: #1a237e;">{{eventName}}</h3>
+        <h3 style="margin: 0 0 8px 0; color: #17615b;">{{eventName}}</h3>
         <p style="margin: 4px 0; font-size: 15px;"><strong>📅 When:</strong> {{eventDate}} at {{eventTime}}</p>
         <p style="margin: 4px 0; font-size: 15px;"><strong>📍 Where:</strong> {{location}}</p>
       </div>

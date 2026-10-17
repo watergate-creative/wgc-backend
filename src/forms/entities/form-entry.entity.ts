@@ -13,6 +13,13 @@ export enum FormType {
   CONTACT = 'Contact Us',
 }
 
+export enum FormEntryStatus {
+  PENDING = 'pending',
+  APPROVED = 'approved',
+  REJECTED = 'rejected',
+  CANCELLED = 'cancelled',
+}
+
 @Entity('FormEntries')
 export class FormEntry extends BaseEntity {
   @Column({
@@ -30,6 +37,13 @@ export class FormEntry extends BaseEntity {
 
   @Column({ type: 'varchar', length: 50, nullable: true })
   phone: string;
+
+  @Column({
+    type: 'enum',
+    enum: FormEntryStatus,
+    default: FormEntryStatus.PENDING,
+  })
+  status: FormEntryStatus;
 
   @Column({ type: 'jsonb', nullable: true, default: '{}' })
   data: Record<string, unknown>;

@@ -9,7 +9,7 @@ import {
   IsObject,
   MaxLength,
 } from 'class-validator';
-import { FormType } from '../entities/form-entry.entity.js';
+import { FormEntryStatus, FormType } from '../entities/form-entry.entity.js';
 import { PaginationQueryDto } from '../../common/dto/pagination.dto.js';
 
 export class CreateFormEntryDto {
@@ -83,6 +83,12 @@ export class UpdateFormEntryDto {
   data?: Record<string, unknown>;
 }
 
+export class UpdateFormEntryStatusDto {
+  @ApiProperty({ enum: FormEntryStatus, example: FormEntryStatus.APPROVED })
+  @IsEnum(FormEntryStatus)
+  status: FormEntryStatus;
+}
+
 export class FormEntryQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional({ enum: FormType, description: 'Filter by form type' })
   @Transform(({ value }) => {
@@ -96,6 +102,11 @@ export class FormEntryQueryDto extends PaginationQueryDto {
   @IsEnum(FormType)
   @IsOptional()
   type?: FormType;
+
+  @ApiPropertyOptional({ enum: FormEntryStatus, description: 'Filter by submission status' })
+  @IsEnum(FormEntryStatus)
+  @IsOptional()
+  status?: FormEntryStatus;
 
   @ApiPropertyOptional({ description: 'Filter by submitter email' })
   @IsEmail()
