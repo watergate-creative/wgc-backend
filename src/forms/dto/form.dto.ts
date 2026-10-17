@@ -53,6 +53,11 @@ export class CreateFormEntryDto {
 }
 
 export class UpdateFormEntryDto {
+  @ApiPropertyOptional({ enum: FormEntryStatus })
+  @IsEnum(FormEntryStatus)
+  @IsOptional()
+  status?: FormEntryStatus;
+
   @ApiPropertyOptional({ enum: FormType })
   @IsEnum(FormType)
   @IsOptional()

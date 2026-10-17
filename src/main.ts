@@ -14,7 +14,30 @@ async function bootstrap() {
 
   app.enableShutdownHooks();
 
-  app.use(helmet());
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          baseUri: ["'self'"],
+          frameAncestors: ["'none'"],
+          objectSrc: ["'none'"],
+          upgradeInsecureRequests:
+            process.env.NODE_ENV === 'production' ? [] : null,
+        },
+      },
+      referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+      strictTransportSecurity: {
+        maxAge: 31536000,
+        includeSubDomains: false,
+      },
+      xFrameOptions: { action: 'deny' },
+    }),
+  );
+  app.use((_req, res, next) => {
+    res.setHeader('Permissions-Policy', 'camera=(), geolocation=(), microphone=()');
+    next();
+  });
   app.enableCors({
 
     origin: true,
